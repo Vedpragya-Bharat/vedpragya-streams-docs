@@ -1,0 +1,75 @@
+---
+title: API reference
+description: Every endpoint and every event, in one place.
+---
+
+import { Callout } from 'nextra/components';
+
+# API reference
+
+This is the one-page index of the platform's public surface. It is
+*intentionally* a summary. For narrative, click through to the
+sections.
+
+## REST (HTTP)
+
+| Method | Path                                   | Purpose                                          |
+| ------ | -------------------------------------- | ------------------------------------------------ |
+| GET    | `/v1/search`                           | Identifier-aware search.                         |
+| POST   | `/v1/instruments/ltp`                  | Bulk LTP snapshot (1 to 500 ids).                 |
+| GET    | `/v1/instruments/ohlcv`                | Intraday and EOD candles.                        |
+| GET    | `/v1/instruments/resolve`              | `EXCHANGE:SYMBOL` → UIR id.                       |
+| GET    | `/v1/watchlist`                        | List the current user's watchlist.               |
+| POST   | `/v1/watchlist`                        | Add one or more instruments.                     |
+| DELETE | `/v1/watchlist/:uirId`                 | Remove a single instrument.                      |
+| POST   | `/v1/watchlist/reorder`                | Persist a new display order.                     |
+
+→ [Full HTTP reference →](/reference/http)
+
+## WebSocket
+
+The live gateway is a Socket.IO endpoint at `wss://stream.vedpragya.com`.
+The protocol is a small set of events on top of Socket.IO.
+
+| Direction | Event                   | Purpose                                          |
+| --------- | ----------------------- | ------------------------------------------------ |
+| client    | `connect`               | Built-in. Re-emit subscriptions on reconnect.    |
+| client    | `subscribe`             | `{ channel, instruments, mode? }`                |
+| client    | `unsubscribe`           | `{ channel, instruments }`                       |
+| server    | `subscription_state`    | Initial state on connect.                        |
+| server    | `subscription_confirmed`| Ack for `subscribe` / `unsubscribe`.             |
+| server    | `market_data`           | A tick.                                          |
+| server    | `error`                 | Protocol error.                                  |
+
+→ [Full WebSocket reference →](/reference/websocket)
+
+## Common headers
+
+| Header        | Required | Notes                                                       |
+| ------------- | -------- | ----------------------------------------------------------- |
+| `x-api-key`   | Yes      | Your bearer key. Same on REST and WebSocket.                |
+| `Content-Type`| Yes (POST) | Always `application/json`.                                |
+| `Authorization` | For per-user REST | Your own session token.                       |
+| `Idempotency-Key` | No (write ops) | At-most-once delivery for 5 minutes.                |
+
+## Common response envelope
+
+REST responses are JSON objects (not arrays). Errors use the standard
+envelope described in [Errors →](/errors).
+
+## Status codes
+
+- 200 — success
+- 400 — bad request
+- 401 — auth missing or invalid
+- 403 — auth valid but not allowed
+- 404 — resource not found
+- 409 — conflict
+- 429 — rate-limited
+- 5xx — server error
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [HTTP reference →](/reference/http)
+</Callout>

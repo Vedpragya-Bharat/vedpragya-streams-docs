@@ -1,0 +1,126 @@
+---
+title: Identifier spaces
+description: Why we have two numeric ids (UIR and provider token), and which one to use.
+---
+
+import { Callout } from 'nextra/components';
+
+# Identifier spaces
+
+There are **two** numeric identifier spaces for instruments. This page
+explains the difference and tells you which one to use.
+
+## The two spaces
+
+### UIR (Universal Instrument Record)
+
+A 64-bit integer assigned by the platform. Stable for the life of the
+contract. Public. The only identifier you should retain in your code.
+
+```
+114996  ← UIR for NSE:RELIANCE
+26026   ← UIR for NSE:NIFTY 50
+256265  ← UIR for NSE:TCS
+```
+
+The UIR id is the *only* identifier the public API uses. Search returns
+it. The live feed accepts it. Watchlist stores it. The snapshot
+endpoint keys its response on it.
+
+### Provider token (internal)
+
+A 32-bit integer assigned by the underlying market data provider. Not
+stable across re-listing. **Private.** The platform translates between
+UIR and provider token inside the gateway.
+
+```
+738561   ← provider's token for NSE:RELIANCE
+256265   ← provider's token for NSE:NIFTY 50
+```
+
+You will *not* see provider tokens in any public-facing response. They
+exist only in the gateway's internal log, which your code never sees.
+
+## Why two spaces
+
+The provider's token space is opaque, dense, and (for some contracts)
+re-uses integers after delisting. We can't safely expose it to you.
+
+The UIR space is curated, stable, and contracted to a single integer
+per *instrument we believe to be a single tradeable thing*. The UIR id
+of `NSE:RELIANCE` is the same id whether you're calling from a mobile
+app, a server, or a notebook.
+
+## What if my code already has provider tokens
+
+You have two options:
+
+### Option A: translate at the boundary
+
+```js
+// One-time, in your gateway.
+const tokenToUir = new Map();
+for (const row of await fetchProviderInstruments()) {
+  tokenToUir.set(row.token, row.uirId);  // populated from the catalogue
+}
+
+function toUir(token) {
+  const uir = tokenToUir.get(token);
+  if (!uir) throw new Error('unknown token: ' + token);
+  return uir;
+}
+```
+
+Refresh the map on a 15-minute cadence. The platform's catalogue is
+rebuilt at the same cadence; align them.
+
+### Option B: re-resolve from canonical
+
+```js
+async function toUir(token) {
+  const canonical = await providerCanonicalOf(token);
+  const r = await fetch(
+    `https://api.vedpragya.com/v1/instruments/resolve?canonical=${encodeURIComponent(canonical)}`,
+    { headers: { 'x-api-key': STREAMS_KEY } },
+  );
+  return (await r.json()).id;
+}
+```
+
+This is slower but doesn't need a refresh.
+
+<Callout type="info" emoji="♻️">
+  We strongly recommend **Option A**. The catalogue is small (~200,000
+  rows), the translation map is tiny, and you avoid per-tick lookups
+  on the hot path.
+</Callout>
+
+## Two things to never do
+
+### Don't store provider tokens as the primary id
+
+The same provider token can re-appear for a different contract after a
+delisting. If you store `738561` as the key for a row, you will mix
+contracts after a corporate action.
+
+### Don't use UIR ids as URL slugs
+
+`https://myapp.com/instruments/114996` works, but the URL is not
+human-readable. Prefer `https://myapp.com/instruments/NSE:RELIANCE` and
+resolve the canonical server-side.
+
+## A note on ISINs
+
+ISINs identify the *underlying issuer* of an equity, not a specific
+listing. `INE002A01018` is Reliance. It is *not* the same as
+`NSE:RELIANCE` or `BSE:RELIANCE`, which are separate contracts with
+separate UIR ids and separate price series.
+
+ISINs are useful for canonical identity ("which company?") but not for
+streaming prices.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Errors & edge cases →](/errors)
+</Callout>

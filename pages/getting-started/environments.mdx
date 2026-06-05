@@ -1,0 +1,69 @@
+---
+title: Environments & base URLs
+description: Production, staging, and how to keep them from leaking into each other.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Environments & base URLs
+
+Streams exposes two environments. Keys are scoped to one environment — your
+staging key will not work in production, and vice versa.
+
+## The two environments
+
+| Environment | Base URL (REST)                 | WebSocket URL                  | Notes                              |
+| ----------- | ------------------------------- | ------------------------------ | ---------------------------------- |
+| Production  | `https://api.vedpragya.com/v1`  | `https://stream.vedpragya.com` | What your customers hit.           |
+| Staging     | `https://stg.api.vedpragya.com` | `https://stg.stream.vedpragya.com` | Synthetic traffic, replays, chaos. |
+
+<Callout type="info" emoji="🧪">
+  Staging replays real market scenarios on a 5-minute delay against recorded
+  ticks. Use it for regression tests, not for live demos.
+</Callout>
+
+## Keep environments separate
+
+```js
+// config/streams.js
+const isProd = process.env.NODE_ENV === 'production';
+
+export const streams = {
+  apiKey: isProd ? process.env.STREAMS_KEY_PROD : process.env.STREAMS_KEY_STG,
+  restUrl: isProd ? 'https://api.vedpragya.com/v1' : 'https://stg.api.vedpragya.com',
+  wsUrl:   isProd ? 'https://stream.vedpragya.com' : 'https://stg.stream.vedpragya.com',
+};
+```
+
+## URL shape
+
+REST routes are versioned:
+
+```
+https://api.vedpragya.com/v1/<resource>
+```
+
+The `v1` prefix is **permanent**. Breaking changes go to `v2`; old routes
+keep working for at least 12 months after a major is deprecated.
+
+## CORS
+
+CORS is open by design. Allowed origins are configured per customer in the
+admin panel. To add or remove an allowed origin (your preview deployment, a
+new domain, etc.), update it there.
+
+## Status page
+
+A live status page is published at `https://status.vedpragya.com`. The
+WebSocket gateway's health is reported separately from the REST API.
+
+## What the platform hides
+
+You don't need to think about the underlying market data provider's URL
+space, instrument-token space, or session refresh schedule. The platform
+keeps those details inside the gateway, and your code talks to a stable
+Vedpragya Streams contract.
+
+<Callout type="default" emoji="➡️">
+  Next: [Search API →](/search)
+</Callout>

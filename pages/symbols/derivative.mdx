@@ -1,0 +1,122 @@
+---
+title: Derivative shorthand
+description: The search format for futures and options on NSE, BSE, MCX, and CDS.
+---
+
+import { Callout } from 'nextra/components';
+
+# Derivative shorthand
+
+The search API understands a small grammar for derivative contracts.
+This is the user-typed form; the canonical form is documented under
+[Canonical instrument format →](/instruments/canonical-format).
+
+## Futures
+
+```
+{UNDERLYING} FUT {DD MMM YY}
+```
+
+| Type this                       | Returns                                              |
+| ------------------------------- | ---------------------------------------------------- |
+| `NIFTY FUT 28 NOV 24`           | NIFTY futures, expiry 28 November 2024.              |
+| `BANKNIFTY FUT 28 NOV 24`       | BANKNIFTY futures, expiry 28 November 2024.          |
+| `GOLD FUT 05 JUN 26`            | MCX gold futures, expiry 5 June 2026.                |
+| `CRUDEOIL FUT 19 MAY 26`        | MCX crude oil futures, expiry 19 May 2026.           |
+| `USDINR FUT 27 NOV 24`          | Currency derivatives on USD/INR.                     |
+| `EURINR FUT 27 NOV 24`          | Currency derivatives on EUR/INR.                     |
+
+The year is **two digits**. `NOV 24` is November 2024. `NOV 2024`
+also works; the tokenizer normalises.
+
+## Options
+
+```
+{UNDERLYING} {STRIKE} {CE|PE} {DD MMM YY}
+```
+
+| Type this                          | Returns                                              |
+| ---------------------------------- | ---------------------------------------------------- |
+| `NIFTY 23500 CE 28 NOV 24`         | NIFTY 23500 call, expiry 28 November 2024.           |
+| `NIFTY 23500 PE 28 NOV 24`         | NIFTY 23500 put, expiry 28 November 2024.            |
+| `BANKNIFTY 51000 CE 27 NOV 24`     | BANKNIFTY 51000 call, expiry 27 November 2024.       |
+| `RELIANCE 2400 CE 28 NOV 24`       | Stock option: Reliance 2400 call.                    |
+| `HDFCBANK 1700 PE 26 DEC 24`       | Stock option: HDFC Bank 1700 put.                    |
+
+### CE / PE
+
+- `CE` = call (European, currently). The platform also accepts `CALL`
+  and `C`; the canonical is `CE`.
+- `PE` = put. `PUT` and `P` also accepted.
+
+### Index vs stock options
+
+The underlying is auto-detected. `NIFTY 23500 CE` is an index option.
+`RELIANCE 2400 CE` is a stock option. The exchange is part of the
+canonical but you don't need to type it.
+
+## Monthly vs weekly
+
+Index options on NIFTY and BANKNIFTY have both **monthly** and
+**weekly** expiries. The platform lists them all. The
+canonical does not include the "weekly" suffix — it just looks like a
+futures-style expiry. The `expiry` and a `kind` field on the
+instrument distinguish them.
+
+## Underlying, but no contract
+
+If the user types `NIFTY 25000` (a strike that doesn't exist in the
+catalogue), search returns no results. The platform does not invent
+contracts. **Do not** auto-create a search query like
+`NIFTY 25000 CE` from a strike the user has not typed — you'll show
+contracts the user didn't ask for.
+
+## MCX contracts
+
+MCX futures are:
+
+| Symbol         | Lot         | Underlying            |
+| -------------- | ----------- | --------------------- |
+| `GOLD`         | 1 kg        | 995 purity gold       |
+| `GOLDM`        | 100 g       | 999 purity gold       |
+| `GOLDPETAL`    | 1 g         | 999 purity gold       |
+| `SILVER`       | 30 kg       | 999 purity silver     |
+| `SILVERM`      | 5 kg        | 999 purity silver     |
+| `CRUDEOIL`     | 100 bbl     | WTI crude             |
+| `CRUDEOILM`    | 10 bbl      | WTI crude             |
+| `NATURALGAS`   | 1250 mmBtu  | Natural gas           |
+| `COPPER`       | 2500 kg     | Copper                |
+
+The `M` suffix means "mini" — a smaller lot size. The platform accepts
+both.
+
+## Currency derivatives
+
+Currency derivatives trade on CDS. The contract symbol is
+`{CCY1}{CCY2}` (e.g. `USDINR`, `EURINR`, `GBPINR`, `JPYINR`).
+
+## Common pitfalls
+
+### Year and date format
+
+`NIFTY 23500 CE 11/28/24` does not parse. The platform expects
+`NIFTY 23500 CE 28 NOV 24`. Build a date-picker on your side that emits
+the right format.
+
+### Strike spacing
+
+NIFTY options trade in 50-point strikes. `NIFTY 23537 CE` is *not* a
+real contract. The catalogue won't have it; search returns nothing.
+Don't suggest non-existent strikes from a free-form number input.
+
+### Weekly vs monthly on the same day
+
+When a weekly and a monthly expire on the same day, the platform
+disambiguates by `kind` (which is not user-visible). Both appear in
+search, with the monthly ranked first.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Identifier spaces →](/symbols/identifier-spaces)
+</Callout>

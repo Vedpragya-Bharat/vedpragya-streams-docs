@@ -1,0 +1,146 @@
+---
+title: HTTP endpoints
+description: Field-level reference for every REST endpoint.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# HTTP endpoints
+
+Base URL: `https://api.vedpragya.com/v1` (production) or
+`https://stg.api.vedpragya.com` (staging).
+
+All endpoints require the `x-api-key` header. Per-user endpoints
+additionally require `Authorization: Bearer <token>`.
+
+## `GET /v1/search`
+
+Identifier-aware search. See [Search →](/search).
+
+| Param         | Type    | Required | Default     | Notes                                                                |
+| ------------- | ------- | -------- | ----------- | -------------------------------------------------------------------- |
+| `q`           | string  | Yes      | —           | The user query.                                                      |
+| `exchange`    | string  | No       | (any)       | Comma-separated. `NSE`, `BSE`, `MCX`, `CDS`, `NFO`, `BFO`.            |
+| `type`        | string  | No       | (any)       | `EQUITY`, `INDEX`, `FUT`, `CE`, `PE`, `COMMODITY`, `CURRENCY`.        |
+| `limit`       | int     | No       | `10`        | 1 to 50.                                                             |
+| `offset`      | int     | No       | `0`         | 0 to 10000.                                                          |
+| `sort`        | string  | No       | `relevance` | `relevance`, `name`, `volume`, `change_pct`.                        |
+| `priceStatus` | string  | No       | `any`       | `live`, `closed`, `any`.                                             |
+| `include`     | string  | No       | —           | `ohlcv` returns today's OHLCV alongside.                            |
+
+Response: `{ query, total, results: Result[] }`. See
+[Response shape →](/search/response).
+
+## `POST /v1/instruments/ltp`
+
+Bulk LTP snapshot. See [LTP snapshot →](/instruments/ltp-snapshot).
+
+Body:
+
+```json
+{ "instruments": [114996, 26026, 256265], "fields": ["lastPrice","ohlc","change","volume"] }
+```
+
+| Field         | Type      | Required | Notes                                                                |
+| ------------- | --------- | -------- | -------------------------------------------------------------------- |
+| `instruments` | int[]     | Yes      | 1 to 500 UIR ids.                                                    |
+| `fields`      | string[]  | No       | Subset of `["lastPrice","ohlc","change","volume"]`.                  |
+| `provider`    | string    | No       | `auto` (default), `primary`, `mirror`. Admin snapshots only.         |
+
+Response: `{ "<uirId>": Quote | null, ... }`. See
+[LTP snapshot → Response shape](/instruments/ltp-snapshot#response).
+
+## `GET /v1/instruments/ohlcv`
+
+Intraday and EOD candles. See [OHLCV →](/instruments/ohlcv).
+
+| Param        | Type     | Required | Notes                                                                |
+| ------------ | -------- | -------- | -------------------------------------------------------------------- |
+| `instrument` | integer  | Yes      | UIR id.                                                              |
+| `interval`   | string   | Yes      | `1m`, `5m`, `15m`, `30m`, `1h`, `1d`, `1w`, `1M`.                   |
+| `from`       | datetime | Yes      | ISO-8601 UTC.                                                        |
+| `to`         | datetime | Yes      | ISO-8601 UTC.                                                        |
+| `adjusted`   | bool     | No       | Default `true`.                                                      |
+| `limit`      | int      | No       | 5,000 max.                                                           |
+
+Response: `{ instrument, interval, candles: Candle[] }`. See
+[OHLCV →](/instruments/ohlcv#response).
+
+## `GET /v1/instruments/resolve`
+
+Canonical → UIR id.
+
+| Param      | Type   | Required | Notes                              |
+| ---------- | ------ | -------- | ---------------------------------- |
+| `canonical`| string | Yes      | `EXCHANGE:SYMBOL` form.            |
+
+Response: `{ id, canonical }`.
+
+## `GET /v1/watchlist`
+
+List the current user's watchlist. Requires `Authorization: Bearer`.
+
+Response: `{ items: [{ uirId, addedAt, order }, ...] }`.
+
+## `POST /v1/watchlist`
+
+Add instruments to the current user's watchlist. Requires `Authorization: Bearer`.
+
+Body:
+
+```json
+{ "instruments": [114996, 256265], "append": true }
+```
+
+| Field         | Type   | Required | Default | Notes                              |
+| ------------- | ------ | -------- | ------- | ---------------------------------- |
+| `instruments` | int[]  | Yes      | —       | 1 to 100 UIR ids.                  |
+| `append`      | bool   | No       | `true`  | `false` to replace.                |
+
+Response: `{ added, skipped, removed }`.
+
+## `DELETE /v1/watchlist/:uirId`
+
+Remove a single instrument. Requires `Authorization: Bearer`.
+
+Response: `{ removed, watchlist: [{ uirId, addedAt, order }, ...] }`.
+
+## `POST /v1/watchlist/reorder`
+
+Persist a new display order. Requires `Authorization: Bearer`.
+
+Body:
+
+```json
+{ "order": [256265, 114996, 26026] }
+```
+
+Response: `{ watchlist: [...] }`.
+
+## Common error codes
+
+See [Common errors →](/errors/common).
+
+## Idempotency
+
+Write endpoints (`POST /v1/watchlist`, `POST /v1/watchlist/reorder`)
+honour the `Idempotency-Key` header. Pass any UUID; the platform
+dedupes for 5 minutes.
+
+## Rate limits
+
+| Endpoint                    | Per key           |
+| --------------------------- | ----------------- |
+| `GET /v1/search`            | 600 / 60 s        |
+| `POST /v1/instruments/ltp`  | 1200 / 60 s       |
+| `GET /v1/instruments/ohlcv` | 600 / 60 s        |
+| `GET /v1/watchlist`         | 600 / 60 s        |
+| `POST /v1/watchlist`        | 120 / 60 s        |
+| `DELETE /v1/watchlist/:id`  | 600 / 60 s        |
+| `POST /v1/watchlist/reorder`| 60 / 60 s         |
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [WebSocket protocol reference →](/reference/websocket)
+</Callout>

@@ -1,0 +1,81 @@
+---
+title: Equities & indices
+description: How to refer to NSE/BSE cash equities and major indices.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Equities & indices
+
+## Equities
+
+The simplest case. The symbol is the ticker.
+
+| Type this        | Returns                                                    |
+| ---------------- | ---------------------------------------------------------- |
+| `RELIANCE`       | NSE:RELIANCE (Reliance Industries Limited).                |
+| `BSE:RELIANCE`   | The BSE-listed Reliance. (Separate UIR id from NSE.)       |
+| `HDFCBANK`       | NSE:HDFCBANK.                                              |
+| `INE002A01018`   | Reliance Industries, by ISIN. Returns the NSE listing.     |
+| `TCS`            | NSE:TCS.                                                   |
+
+If an instrument is dual-listed, **NSE wins by default** when you type
+just the ticker. Use the explicit `BSE:` prefix to disambiguate.
+
+## Indices
+
+Indices are first-class instruments. They have a UIR id, a canonical,
+and a `priceStatus`. The major indices are:
+
+| Index         | Canonical          | Notes                                  |
+| ------------- | ------------------ | -------------------------------------- |
+| NIFTY 50      | `NSE:NIFTY 50`     | The headline Indian large-cap index.   |
+| BANKNIFTY     | `NSE:BANKNIFTY`    | Banking sub-index.                     |
+| SENSEX        | `BSE:SENSEX`       | BSE headline index.                    |
+| BANKEX        | `BSE:BANKEX`       | BSE banking sub-index.                 |
+| NIFTY IT      | `NSE:NIFTY IT`     | IT sub-index.                          |
+| NIFTY AUTO    | `NSE:NIFTY AUTO`   | Auto sub-index.                        |
+| NIFTY FMCG    | `NSE:NIFTY FMCG`   | FMCG sub-index.                        |
+| NIFTY METAL   | `NSE:NIFTY METAL`  | Metals sub-index.                      |
+| NIFTY PHARMA  | `NSE:NIFTY PHARMA` | Pharma sub-index.                      |
+| NIFTY REALTY  | `NSE:NIFTY REALTY` | Realty sub-index.                      |
+| NIFTY ENERGY  | `NSE:NIFTY ENERGY` | Energy sub-index.                      |
+| NIFTY INFRA   | `NSE:NIFTY INFRA`  | Infra sub-index.                       |
+
+## Common pitfalls
+
+### A ticker that's also a substring of another
+
+`RELI` will rank `RELIANCE` first, but also includes `RELIGARE`,
+`RELIANCE INFRA`, and similar. The typeahead is fuzzy on purpose — a
+user who typed `RELI` may genuinely mean any of them. If your UI shows
+the top-3 hits with a "see all" link, that's the right behaviour.
+
+### Multi-word symbols
+
+`M&M` (Mahindra & Mahindra) is two tokens. The tokenizer handles this,
+but the search bar should treat it as a single query.
+
+`MOTILAL OSWAL` is a BSE-listed broker, not a derivative. The
+tokenizer ranks it correctly when the user types
+`MOTILAL OSWAL`, not `MOFSL`.
+
+<Callout type="info" emoji="🔤">
+  If your users habitually type broker-side tickers (`MOFSL`, `ZERODHA`,
+  …) for the same underlying, build a small alias map on your side and
+  rewrite the query before calling search. The platform does not bake
+  broker-side aliases into the catalogue.
+</Callout>
+
+### Suspended / delisted
+
+`YESBANK` was suspended in 2020. The contract is still in the
+catalogue (with `priceStatus: 'closed'`) so the search returns it but
+the live feed won't emit ticks. Use `priceStatus` to drive the empty
+state.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Derivative shorthand →](/symbols/derivative)
+</Callout>

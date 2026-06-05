@@ -1,0 +1,142 @@
+---
+title: Live data
+description: The WebSocket gateway: connect, subscribe, receive ticks. The most important page in these docs.
+---
+
+import { Callout, Tabs, Tab, Cards } from 'nextra/components';
+
+# Live data
+
+The live gateway is a Socket.IO WebSocket at `wss://stream.vedpragya.com`.
+It speaks a tiny, stable protocol. There is **one** message type for
+subscribing, **one** event name for ticks, and **one** for subscription
+acknowledgements. Everything else is metadata.
+
+## What you get
+
+- **Push-based ticks.** Average tick-to-client latency: 8–30 ms.
+- **One socket per browser tab.** Multiplexed subscriptions.
+- **Up to 1,000 instruments per socket.** More on request.
+- **Auto-reconnect with replay.** We replay the last 60 seconds of ticks
+  on reconnect.
+- **Daily session refresh is invisible.** The platform handles the
+  upstream market data provider's daily access-token refresh. You keep one
+  long-lived API key.
+
+## The five-minute version
+
+<Tabs items={['Node', 'Browser', 'Python']}>
+  <Tab>
+    ```js
+    import { io } from 'socket.io-client';
+
+    const socket = io('https://stream.vedpragya.com', {
+      extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
+      transports: ['websocket'],
+    });
+
+    socket.on('connect', () => {
+      socket.emit('subscribe', {
+        channel: 'market_data',
+        instruments: [114996, 26026],
+      });
+    });
+
+    socket.on('subscription_confirmed', (ack) => {
+      console.log('subscribed to', ack.instruments);
+    });
+
+    socket.on('market_data', (tick) => {
+      console.log(tick.uirId, tick.lastPrice);
+    });
+    ```
+  </Tab>
+  <Tab>
+    ```html
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+      const socket = io('https://stream.vedpragya.com', {
+        extraHeaders: { 'x-api-key': window.STREAMS_KEY },
+        transports: ['websocket'],
+      });
+
+      socket.on('connect', () => {
+        socket.emit('subscribe', {
+          channel: 'market_data',
+          instruments: [114996, 26026],
+        });
+      });
+
+      socket.on('market_data', (tick) => {
+        document.body.insertAdjacentText(
+          'beforeend',
+          `${tick.uirId} → ${tick.lastPrice}\n`,
+        );
+      });
+    </script>
+    ```
+  </Tab>
+  <Tab>
+    ```python
+    import os, socketio
+
+    sio = socketio.Client()
+
+    @sio.event
+    def connect():
+        sio.emit('subscribe', {
+            'channel': 'market_data',
+            'instruments': [114996, 26026],
+        })
+
+    @sio.on('market_data')
+    def on_tick(data):
+        print(data['uirId'], data['lastPrice'])
+
+    sio.connect(
+        'https://stream.vedpragya.com',
+        headers={'x-api-key': os.environ['STREAMS_KEY']},
+        transports=['websocket'],
+    )
+    sio.wait()
+    ```
+  </Tab>
+</Tabs>
+
+## What the platform hides
+
+You do not need to know which market data provider sits behind Streams,
+or how their session refresh works, or what their instrument-token space
+looks like. The gateway takes care of:
+
+- **Underlying session refresh.** The provider's daily access token is
+  refreshed server-side. Your key is long-lived.
+- **Identifier translation.** Subscribing with UIR ids is enough; the
+  gateway translates them to the provider's token space internally.
+- **Stale-tick detection.** Each tick carries a monotonic sequence number.
+  Late ticks are dropped before they reach your code.
+- **Backpressure.** If your client is slow to consume, the gateway pauses
+  the stream and re-emits the most recent state once you're ready.
+
+## Topics
+
+<Cards>
+  <Cards.Card title="Connect & handshake" href="/live-data/connect">
+    URL, transport options, the `connect` event, the initial `subscription_state`.
+  </Cards.Card>
+  <Cards.Card title="Subscribe to ticks" href="/live-data/subscribe">
+    The `subscribe` / `unsubscribe` frames and the `subscription_confirmed` ack.
+  </Cards.Card>
+  <Cards.Card title="Event reference" href="/live-data/events">
+    `market_data`, `order_update`, `subscription_confirmed`, `error` — every event in detail.
+  </Cards.Card>
+  <Cards.Card title="Reconnection & resilience" href="/live-data/reconnection">
+    Auto-reconnect, replay, and the two patterns that hold up under flaky networks.
+  </Cards.Card>
+</Cards>
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Connect & handshake →](/live-data/connect)
+</Callout>

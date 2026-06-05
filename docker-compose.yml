@@ -1,0 +1,42 @@
+# docker-compose snippet for local development of the docs site.
+#
+# Two services:
+# - docs-dev: hot-reloading Next.js dev server on http://localhost:3000
+# - docs-build: production build, served by nginx on http://localhost:8080
+#
+# Run dev with:   docker compose up docs-dev
+# Run prod with:  docker compose up docs-build
+#
+# This file is provided for local convenience; production deploys are
+# out of scope for this snippet.
+
+version: "3.9"
+
+services:
+  docs-dev:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - docs_node_modules:/app/node_modules
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+
+  docs-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  docs_node_modules:

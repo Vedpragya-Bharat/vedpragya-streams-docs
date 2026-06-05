@@ -1,0 +1,27 @@
+# node_modules is large; install fresh in the container.
+node_modules
+
+# Build artefacts.
+.next
+out
+.turbo
+
+# Editor / OS noise.
+.DS_Store
+Thumbs.db
+
+# VCS.
+.git
+.gitignore
+.github
+
+# Logs and env.
+*.log
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+
+# Test / coverage output.
+coverage
+.nyc_output

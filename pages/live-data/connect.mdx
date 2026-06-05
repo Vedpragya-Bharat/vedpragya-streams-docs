@@ -1,0 +1,119 @@
+---
+title: Connect & handshake
+description: URL, transport, headers, the connect event, and the initial subscription state.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Connect & handshake
+
+## URL
+
+```
+https://stream.vedpragya.com
+```
+
+The gateway is a Socket.IO v4 endpoint. Connect over **WebSocket** (we
+recommend `transports: ['websocket']` to skip the long-poll upgrade).
+
+## Transport
+
+<Tabs items={['Socket.IO client (recommended)', 'Plain WebSocket (advanced)']}>
+  <Tab>
+    ```js
+    import { io } from 'socket.io-client';
+
+    const socket = io('https://stream.vedpragya.com', {
+      extraHeaders: { 'x-api-key': STREAMS_KEY },
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 10_000,
+      timeout: 10_000,
+    });
+    ```
+  </Tab>
+  <Tab>
+    The platform also accepts raw WebSocket clients speaking the
+    Socket.IO protocol. See the [reference](/reference/websocket) for the
+    exact frame layout. **Most teams should not need this.**
+  </Tab>
+</Tabs>
+
+## Headers
+
+| Header      | Required | Notes                                                |
+| ----------- | -------- | ---------------------------------------------------- |
+| `x-api-key` | Yes      | Same key as REST.                                    |
+| `Origin`    | Browser  | Must be on the CORS allowlist for the customer.      |
+
+## Lifecycle
+
+```
+client                                gateway
+  |                                      |
+  |  ─── WS upgrade + headers ──────►   |
+  |                                      |
+  |  ◄── 101 Switching Protocols ───    |
+  |                                      |
+  |  ─── Engine.IO open ────────────►   |
+  |  ◄── 0{"sid":"abc",...} ───────     |
+  |                                      |
+  |  ─── 40{"channel":"market_data"} ►  |
+  |  ◄── 40{"sid":"abc"} ────────       |  ← connect ack
+  |                                      |
+  |  ◄── 42["subscription_state",{...}] |  ← initial state
+  |                                      |
+  |  ─── 42["subscribe",{...}] ─────►   |
+  |  ◄── 42["subscription_confirmed",{...}] |
+  |                                      |
+  |  ◄── 42["market_data",{...}] ───    |  ← tick
+  |  ◄── 42["market_data",{...}] ───    |  ← tick
+```
+
+## The `connect` event
+
+You only need to act on the **client** `connect` event. After the
+transport-level handshake is done, the gateway emits a
+`subscription_state` event describing the instruments the socket is
+currently subscribed to. This is **empty on a fresh connect** — a fresh
+socket has no subscriptions.
+
+```js
+socket.on('connect', () => {
+  // Re-emit any subscriptions you want, or restore from a prior session.
+  socket.emit('subscribe', { channel: 'market_data', instruments: [114996] });
+});
+
+socket.on('subscription_state', (state) => {
+  // state: { channel, instruments: [114996, ...] }
+  console.log('currently subscribed to', state.instruments);
+});
+```
+
+## Authentication failures
+
+| Cause                         | Symptom                                    | What to do                            |
+| ----------------------------- | ------------------------------------------ | ------------------------------------- |
+| `x-api-key` missing           | `connect_error` with reason `no_api_key`   | Add the header.                       |
+| `x-api-key` invalid           | `connect_error` with reason `bad_api_key`  | Re-issue from admin panel.            |
+| `x-api-key` from wrong env    | `connect_error` with reason `env_mismatch`  | Check staging vs production key.      |
+| `Origin` not allowed          | `connect_error` with reason `cors_blocked` | Add your domain to the CORS allowlist. |
+
+<Callout type="info" emoji="🔁">
+  See [Reconnection & resilience →](/live-data/reconnection) for how
+  `connect_error` should be handled.
+</Callout>
+
+## Idle behaviour
+
+A socket with no subscriptions is **kept alive** by 25-second ping/pong
+frames. The gateway closes a socket that has been idle (no subscribe,
+no unsubscribe) for **5 minutes** with a `close` reason of `idle_timeout`.
+Send a `subscribe` or `unsubscribe` frame to reset the idle timer.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Subscribe to ticks →](/live-data/subscribe)
+</Callout>

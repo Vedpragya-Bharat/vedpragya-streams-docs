@@ -1,0 +1,102 @@
+---
+title: Authentication
+description: How to send your API key, the three header rules, and the rate-limit model.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Authentication
+
+Streams uses a **single long-lived API key** sent on every request. There are
+no OAuth flows to wire, no tokens to refresh, and no SDK to install.
+
+## Sending the key
+
+<Tabs items={['REST', 'WebSocket', 'Server-side']}>
+  <Tab>
+    ```bash
+    curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
+      -H "x-api-key: $STREAMS_KEY"
+    ```
+  </Tab>
+  <Tab>
+    ```js
+    import { io } from 'socket.io-client';
+
+    const socket = io('https://stream.vedpragya.com', {
+      extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
+      transports: ['websocket'],          // skip the long-poll upgrade
+    });
+    ```
+  </Tab>
+  <Tab>
+    ```ts
+    // You should also pin the host on the server.
+    const headers = { 'x-api-key': process.env.STREAMS_KEY! };
+    const r = await fetch('https://api.vedpragya.com/v1/search?q=RELIANCE', {
+      headers,
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Header rules
+
+| Header         | Required | Purpose                                                       |
+| -------------- | -------- | ------------------------------------------------------------- |
+| `x-api-key`    | Yes      | Your bearer key. Missing or invalid → `401`.                  |
+| `x-provider`   | No       | Provider hint (used only by the admin-snapshot mirror).       |
+| `Content-Type` | Yes (POST) | Always `application/json` for JSON bodies.                  |
+
+<Callout type="warning" emoji="🔐">
+  Treat your API key like a password. Don't check it into git, don't ship it
+  to a public bundle, and don't log it. Stream keys are scoped per environment
+  — your production key won't work against staging and vice versa.
+</Callout>
+
+## Where the key is sent
+
+- **From a browser:** the `x-api-key` header is fine. CORS is open for
+  public-facing clients. If you want defense-in-depth, see the optional
+  [referrer restriction](/errors#referrer-restrictions).
+- **From a server:** the same header. We recommend pinning the host and
+  forcing HTTPS.
+- **From a mobile app:** the same header. Mobile keys are issued separately
+  and can be rotated independently.
+
+## Rate limits
+
+Rate limits are **per key**, not per IP. The model is intentionally simple:
+
+| Endpoint                    | Limit (per key)             | Burst          |
+| --------------------------- | --------------------------- | -------------- |
+| `GET /v1/search`            | 600 requests / 60 s         | 30 in 1 s      |
+| `POST /v1/instruments/ltp` | 1200 requests / 60 s        | 60 in 1 s      |
+| `GET /v1/instruments/ohlcv` | 600 requests / 60 s         | 30 in 1 s      |
+| `GET /v1/watchlist`         | 600 requests / 60 s         | 30 in 1 s      |
+| `POST /v1/watchlist`        | 120 requests / 60 s         | 6 in 1 s       |
+| WS messages (subscribe)     | 60 subscribe frames / 60 s  | 4 in 1 s       |
+| WS messages (everything else) | unlimited on inbound       | —              |
+
+<Callout type="info" emoji="📈">
+  The system uses a sliding window. If you get a `429`, the response
+  includes `Retry-After` in seconds. Honor it.
+</Callout>
+
+## Rotating a key
+
+1. In the admin panel, click **Rotate** next to the key you want to refresh.
+2. The old key keeps working for **15 minutes** while you migrate.
+3. Cut over to the new key.
+4. The old key is then deleted.
+
+## Revoking a key
+
+Immediate. Use this if you suspect a leak. The platform also issues an
+audited event you can see in the admin panel.
+
+## Next step
+
+<Callout type="default" emoji="➡️">
+  → [Your first request](/getting-started/first-request)
+</Callout>

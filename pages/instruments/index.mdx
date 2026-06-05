@@ -1,0 +1,62 @@
+---
+title: Instruments
+description: The instrument reference APIs: LTP snapshot, OHLCV, canonical-format resolver.
+---
+
+import { Cards } from 'nextra/components';
+
+# Instruments
+
+The "instruments" surface is everything you need to *resolve* a symbol into
+a UIR id and *quote* it without opening a WebSocket. It is the read-only,
+REST-only counterpart to the live stream.
+
+## What lives here
+
+<Cards>
+  <Cards.Card title="LTP snapshot" href="/instruments/ltp-snapshot">
+    The most-called endpoint. <code>POST /v1/instruments/ltp</code> with up to
+    500 UIR ids returns the latest LTP, OHLC, change, volume.
+  </Cards.Card>
+  <Cards.Card title="OHLCV & history" href="/instruments/ohlcv">
+    <code>GET /v1/instruments/ohlcv</code> for intraday and EOD candles.
+  </Cards.Card>
+  <Cards.Card title="Canonical format" href="/instruments/canonical-format">
+    How to round-trip a <code>EX:SYMBOL</code> string to a UIR id and back.
+  </Cards.Card>
+</Cards>
+
+## Identifier discipline
+
+There is exactly **one** identifier your code should care about: the UIR
+id. It is stable. It is numeric. It works on every endpoint. The search
+result, the live feed, the watchlist, the snapshot, the OHLCV — all of them
+take and return UIR ids.
+
+You will see two other identifier-shaped things in some responses:
+
+- `canonical` — the `EXCHANGE:SYMBOL` form (e.g. `NSE:RELIANCE`,
+  `NFO:NIFTY 23500 CE 28 NOV 24`). Human-readable, round-trips to a UIR id.
+- `providerToken` — the underlying provider's instrument token. This is
+  present only in a few admin/debug surfaces. **Do not depend on it.**
+
+## Don't mix spaces
+
+The platform maintains two distinct identifier spaces:
+
+1. **UIR space** (public, what you use)
+2. **Provider-token space** (private, internal)
+
+The provider's token is a 32-bit integer assigned by the upstream market
+data vendor. The UIR id is a 64-bit integer assigned by the platform.
+The search API returns UIR ids; the live WebSocket accepts UIR ids. The
+two are never equal for the same contract.
+
+If you ever see a `providerToken` leaking into your UI, it's a bug — file
+it.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [LTP snapshot →](/instruments/ltp-snapshot)
+</Callout>

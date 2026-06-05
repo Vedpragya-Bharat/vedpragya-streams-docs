@@ -1,0 +1,158 @@
+---
+title: Canonical instrument format
+description: The exact shape of the canonical string, and how the platform builds it.
+---
+
+import { Callout } from 'nextra/components';
+
+# Canonical instrument format
+
+The canonical is the **display string** for a contract. It is also the
+*round-trip identifier*: `canonical → UIR id` and back is a bijection.
+
+## The shape
+
+```
+EXCHANGE:SYMBOL
+```
+
+Where `EXCHANGE` is one of the supported exchange codes (see below) and
+`SYMBOL` is an exchange-specific format. The colon is mandatory.
+
+## Exchange codes
+
+| Code  | Exchange                                |
+| ----- | --------------------------------------- |
+| `NSE` | National Stock Exchange of India.       |
+| `BSE` | Bombay Stock Exchange.                  |
+| `MCX` | Multi Commodity Exchange of India.      |
+| `CDS` | Currency Derivatives Segment (NSE).     |
+| `NFO` | NSE Futures & Options.                  |
+| `BFO` | BSE Futures & Options.                  |
+
+## Symbol formats by class
+
+### Equities and indices
+
+```
+EXCHANGE:ISSUER
+NSE:RELIANCE
+BSE:HDFCBANK
+NSE:NIFTY 50
+BSE:SENSEX
+```
+
+Indices use a space-separated phrase, not a ticker. `NSE:NIFTY 50` is
+one symbol, not two.
+
+### Futures
+
+```
+EXCHANGE:UNDERLYING FUT DD MMM YY
+NFO:NIFTY FUT 28 NOV 24
+BFO:SENSEX FUT 28 NOV 24
+MCX:GOLD FUT 05 JUN 26
+MCX:CRUDEOIL FUT 19 MAY 26
+CDS:USDINR FUT 27 NOV 24
+```
+
+The year is two digits. The platform's `resolve` endpoint is tolerant:
+`NFO:NIFTY FUT 28 NOV 2024` and `NFO:NIFTY FUT 28/NOV/24` both work.
+The canonical is *always* `DD MMM YY`.
+
+### Options
+
+```
+EXCHANGE:UNDERLYING STRIKE CE|PE DD MMM YY
+NFO:NIFTY 23500 CE 28 NOV 24
+NFO:NIFTY 23500 PE 28 NOV 24
+NFO:BANKNIFTY 51000 CE 27 NOV 24
+NFO:RELIANCE 2400 CE 28 NOV 24
+```
+
+### Commodities
+
+```
+MCX:UNDERLYING [M]
+MCX:GOLD
+MCX:GOLDM
+MCX:GOLDPETAL
+MCX:SILVER
+MCX:SILVERM
+```
+
+The cash commodity is its own UIR. The future is a separate UIR whose
+canonical follows the futures format.
+
+## Round-tripping
+
+```js
+// 1. Resolve
+const r1 = await fetch(
+  'https://api.vedpragya.com/v1/instruments/resolve?canonical=NSE:RELIANCE',
+  { headers: { 'x-api-key': STREAMS_KEY } },
+).then((r) => r.json());
+// r1: { id: 114996, canonical: 'NSE:RELIANCE' }
+
+// 2. UIR id → canonical
+const r2 = await fetch(
+  'https://api.vedpragya.com/v1/instruments/resolve?id=114996',
+  { headers: { 'x-api-key': STREAMS_KEY } },
+).then((r) => r.json());
+// r2: { id: 114996, canonical: 'NSE:RELIANCE' }
+```
+
+The two are always the same string. The platform normalises on
+ingestion, so any spelling that resolves to the same UIR id resolves to
+the same canonical.
+
+## Common pitfalls
+
+### The exchange prefix matters
+
+`NSE:RELIANCE` and `BSE:RELIANCE` are different contracts. There is no
+"RELIANCE" canonical. If you store symbols in a database, store the
+exchange prefix with them.
+
+### `CDS` vs `NFO`
+
+Currency derivatives live on `CDS`, not `NFO`. `CDS:USDINR` is the USD
+INR future. `NFO:USDINR` does not exist.
+
+### `MCX` and micro lots
+
+`MCX:GOLDM` is a 100g micro lot. `MCX:GOLD` is the 1kg standard lot.
+Same underlying, different contracts.
+
+### Futures expiry day
+
+`NFO:NIFTY FUT 28 NOV 24` expires on 28 November 2024. After that
+date, the canonical exists in the catalogue for historical reference
+but its `priceStatus` is `closed`. The active contract is the next
+expiry. The platform does not auto-rewrite a "give me the NIFTY future"
+query to "give me the active NIFTY future" — that is your code's job.
+Use `/v1/instruments/active` for that.
+
+## When canonicals change
+
+The platform tracks corporate actions and will sometimes **rename**
+the canonical of a contract (e.g. a stock that merges with another
+takes the surviving entity's name). The UIR id is stable across
+renames. The canonical at any point in time is whatever the catalogue
+says at that point in time.
+
+If you store canonicals, store them with the `asOf` timestamp and
+re-resolve periodically.
+
+## A note on user-typed strings
+
+Users will not type the canonical. They will type
+`NIFTY 23500 CE 28 NOV` (no exchange prefix, no year on 24's). The
+search endpoint handles this. The canonical is what *you* store, not
+what *they* type.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Search →](/search)
+</Callout>

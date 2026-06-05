@@ -1,0 +1,156 @@
+---
+title: Event reference
+description: Every event the gateway emits, with field-level reference and example payloads.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Event reference
+
+The gateway emits **five** events. Three are data, two are protocol
+metadata.
+
+| Event                   | Direction  | Purpose                                                    |
+| ----------------------- | ---------- | ---------------------------------------------------------- |
+| `connect`               | client     | Socket.IO built-in. Fires on (re)connect.                  |
+| `disconnect`            | client     | Socket.IO built-in. Fires on disconnect.                   |
+| `subscription_state`    | server     | Initial state on connect: current subscriptions.           |
+| `subscription_confirmed`| server     | Ack for `subscribe` / `unsubscribe`.                       |
+| `market_data`           | server     | A tick. The bread and butter.                              |
+| `error`                 | server     | Protocol error. Always paired with a 4xx-style reason.     |
+
+## `subscription_state`
+
+Emitted **once**, immediately after the transport handshake.
+
+```json
+{
+  "channel": "market_data",
+  "instruments": [114996, 26026],
+  "mode": "quote"
+}
+```
+
+If you've just reconnected, this is the gateway's record of your prior
+subscriptions. If you've just connected for the first time, this is
+empty.
+
+## `subscription_confirmed`
+
+Emitted in response to a `subscribe` or `unsubscribe` frame.
+
+```json
+{
+  "channel": "market_data",
+  "mode": "quote",
+  "confirmed":   [114996, 26026],
+  "unresolved":  [],
+  "forbidden":   []
+}
+```
+
+| Field         | Meaning                                                       |
+| ------------- | ------------------------------------------------------------- |
+| `confirmed`   | The UIR ids that are now in your subscription set.            |
+| `unresolved`  | UIR ids the platform does not know.                           |
+| `forbidden`   | UIR ids the platform knows but your key cannot access.        |
+
+<Callout type="info" emoji="🔍">
+  `forbidden` is rare. It means the platform knows the instrument but
+  has flagged it as out of scope for your key (e.g. an instrument that
+  requires a higher tier). Email support if you see one in production.
+</Callout>
+
+## `market_data`
+
+A tick. Emitted at-most-once per `uirId` per change.
+
+```json
+{
+  "uirId": 114996,
+  "lastPrice": 2347.10,
+  "open": 2331.50,
+  "high": 2350.00,
+  "low": 2325.40,
+  "close": 2341.10,
+  "change": 6.00,
+  "changePct": 0.26,
+  "volume": 12403201,
+  "oi": null,
+  "seq": 1840201,
+  "ts": "2026-06-05T03:45:11.142Z"
+}
+```
+
+### Field reference
+
+| Field         | Type     | Notes                                                                       |
+| ------------- | -------- | --------------------------------------------------------------------------- |
+| `uirId`       | integer  | Universal Instrument Record id. Stable.                                     |
+| `lastPrice`   | number   | Most recent trade price.                                                    |
+| `open`        | number   | Today's session open.                                                       |
+| `high`        | number   | Today's session high.                                                       |
+| `low`         | number   | Today's session low.                                                        |
+| `close`       | number   | Previous session close.                                                     |
+| `change`      | number   | `lastPrice - close`.                                                        |
+| `changePct`   | number   | `(change / close) * 100`.                                                   |
+| `volume`      | integer  | Cumulative traded volume.                                                  |
+| `oi`          | integer? | Open interest (derivatives only).                                           |
+| `seq`         | integer  | Monotonic per `uirId`. Use to drop late ticks.                              |
+| `ts`          | string   | ISO-8601 timestamp of the trade (UTC).                                      |
+
+### Modes
+
+The fields above are the `quote` mode. With `ltp`, only `uirId`,
+`lastPrice`, and `ts` are present. With `full`, you also get `depth`,
+`iv`, `oi`, `tbq` (total buy quantity), `tsq` (total sell quantity).
+
+### `seq` semantics
+
+`seq` is **per-uirId monotonic**. It increases on every tick. If you
+receive two ticks for the same `uirId` with the same `seq`, the second
+is a duplicate and can be dropped. If a tick arrives with a `seq` lower
+than the one you last saw, it is **out of order** and should also be
+dropped.
+
+The gateway dedupes in-order duplicates and most out-of-order ticks, but
+edge cases at the boundaries (reconnect, replay) can still produce one.
+The `seq` field lets your code stay correct.
+
+## `error`
+
+A protocol error. Always carries a `code` and `message`.
+
+```json
+{
+  "code": "subscribe_too_many",
+  "message": "Maximum 1000 instruments per subscribe frame.",
+  "details": { "received": 1500, "limit": 1000 }
+}
+```
+
+| Code                      | Meaning                                                  |
+| ------------------------- | -------------------------------------------------------- |
+| `bad_frame`               | JSON could not be parsed.                                |
+| `missing_field`           | `channel` or `instruments` missing.                      |
+| `unknown_channel`         | `channel` is not `"market_data"`.                        |
+| `subscribe_too_many`      | More than 1,000 ids in a single frame.                   |
+| `subscribe_rate_limited`  | 60 subscribe frames per 60 s exceeded.                   |
+| `internal_error`          | Gateway bug. Retry.                                      |
+
+## What you will never see
+
+- The platform never emits a tick with the provider's instrument token
+  in the `uirId` field. If you see a numeric id in a `market_data` frame
+  that is *not* the same id you subscribed with, it is a bug — file it.
+- The platform never emits a tick for a `uirId` that is not in your
+  current subscription set. (Exception: the `subscription_state` echo on
+  reconnect.)
+- The platform never emits two ticks with the same `seq` for the same
+  `uirId`. If you see one, file it.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Reconnection & resilience →](/live-data/reconnection)
+</Callout>

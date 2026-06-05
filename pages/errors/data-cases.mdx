@@ -1,0 +1,156 @@
+---
+title: Tricky data cases
+description: "The data is right, but the UI is wrong." When to expect a null, a stale value, a halt, or a re-listing.
+---
+
+import { Callout } from 'nextra/components';
+
+# Tricky data cases
+
+This page is about the cases where the platform is doing the right
+thing but the *output* looks surprising. Each section explains the
+case, the data shape, and the recommended UI.
+
+## "My NIFTY is showing as 100"
+
+A common support ticket. The platform is correct; the client is
+showing a *different* UIR id under the label "NIFTY".
+
+**Diagnosis:** the client has a list of UIR ids it cares about, and one
+of them is mapped to the wrong display symbol. Most often this is
+because the client stored the symbol string and tried to use it as an
+identifier, and another contract happens to share the same display
+prefix.
+
+**Fix:** always use UIR ids internally; show the symbol string only in
+the UI. When a tick arrives, key the row by `uirId`, not by symbol.
+
+## "The price isn't moving"
+
+A common support ticket. The user is staring at a row that hasn't
+updated in 5 minutes.
+
+**Diagnosis:** the underlying market is closed. The `priceStatus` is
+`closed`. The platform is correctly not emitting ticks.
+
+**Fix:** render the `priceStatus` as a state. When the market is
+closed, show the last-trade timestamp ("as of 15:30 IST") instead of
+the price. Subscribe to the open event (not a public endpoint today)
+or check the `priceStatus` periodically.
+
+## "I see two rows for the same symbol"
+
+A common support ticket. NIFTY 50 on NSE and on BSE are *different
+contracts* with *different UIR ids* and *different price series*. They
+happen to share the same index name. The platform lists both.
+
+**Fix:** the search bar should default to one exchange per index (NSE
+for NIFTY 50, BSE for SENSEX). If your users want the BSE NIFTY 50,
+they can pick it explicitly. Don't show both on the same page by
+default.
+
+## "The price is wildly wrong"
+
+A common support ticket. The price is in a different scale than the
+user expects.
+
+**Diagnosis:** typically a corporate action was applied retrospectively
+to the historical series, but the user's chart is using a mix of
+adjusted and unadjusted candles.
+
+**Fix:** commit to one mode (`adjusted` or raw) for any given chart.
+Don't switch mid-view.
+
+<Callout type="info" emoji="🔍">
+  See [OHLCV → Adjusted vs raw](/instruments/ohlcv#adjusted-vs-raw) for
+  the full treatment.
+</Callout>
+
+## "Ticks stopped for one instrument"
+
+A common support ticket. The user is subscribed to 10 instruments; 9
+are ticking; 1 is not.
+
+**Diagnosis:** the platform is correctly handling a `halted` or
+`pre-open` state for that one instrument. Or the contract has just
+been delisted.
+
+**Fix:** the `priceStatus` field on the snapshot response (and on the
+catalogue row) tells you which case it is. Render a per-row empty
+state — don't apply a global "market closed" badge because one of ten
+rows isn't ticking.
+
+## "Volume is huge"
+
+A common support ticket. The volume field shows a number that looks
+impossibly high.
+
+**Diagnosis:** derivatives (futures and options) report contract
+volume, not share volume. The number is correct for the contract.
+
+**Fix:** render the volume field with a unit suffix when
+`instrumentType` is `FUT`, `CE`, or `PE`. Or, better, render a derived
+field ("lots" = `volume / lotSize`) for derivatives.
+
+## "I got a tick for an id I didn't subscribe to"
+
+This should not happen. If it does, file a bug with the `traceId`
+from the `connect_error` or the most recent `error` event.
+
+## "I subscribed, but `subscription_confirmed` shows the id as `unresolved`"
+
+The UIR id is wrong. The platform does not have an instrument with
+that id. The most common cause: you stored a `providerToken` and tried
+to use it as a UIR id (the two spaces are not the same).
+
+**Fix:** re-resolve from canonical. Don't carry forward legacy
+identifiers without a translation map.
+
+## "The snapshot says `null`"
+
+The snapshot has a `null` for a UIR id you know is valid. The most
+common cause: the market is closed and the snapshot mirror hasn't
+caught up. A second common cause: the id is for a derivative that
+expired this morning and the catalogue hasn't been rebuilt yet.
+
+**Fix:** render `null` as a distinct state ("no quote available") —
+not as zero, not as the last-seen price. When the platform has a quote,
+it will return one.
+
+## "Tick arrived, but `seq` is lower than the last one I saw"
+
+Two cases:
+
+1. **Out-of-order tick from upstream.** The platform should be
+   filtering these; if you see one, file a bug.
+2. **Replay after reconnect.** The replay emits the last 60 seconds
+   of ticks in order, then resumes with new ones. The `seq` *continues*
+   from where you left off. You should not see a regression unless the
+   platform has restarted. If you do, file a bug.
+
+## "Two ticks for the same id with the same `seq`"
+
+This should not happen. The platform dedupes. If you see it, file a bug.
+
+## "Symbol changed from `MOFSL` to `MOTILAL OSWAL`"
+
+The provider changed the symbol string. The platform mirrors it.
+
+**Fix:** never store the symbol as the primary identifier. Store the
+UIR id, and resolve the symbol to display each time you render.
+
+## Summary of "don't"
+
+- Don't store `providerToken` as a UIR id. Translate at the boundary.
+- Don't use the symbol string as the React `key`. Use the UIR id.
+- Don't render `null` as `0`. It's not a price; it's the absence of one.
+- Don't mix adjusted and raw candles in the same chart.
+- Don't assume a `market_data` event will arrive for every subscribed
+  id. If you need a guarantee, fetch the snapshot.
+- Don't retry 4xx.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [API reference →](/reference/http)
+</Callout>

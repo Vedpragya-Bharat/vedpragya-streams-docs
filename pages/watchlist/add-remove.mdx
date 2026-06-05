@@ -1,0 +1,142 @@
+---
+title: Add & remove
+description: The POST and DELETE endpoints, with payloads and error cases.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Add & remove
+
+## `GET /v1/watchlist`
+
+List the current user's watchlist.
+
+```http
+GET /v1/watchlist
+Authorization: Bearer <user-token>
+x-api-key: vk_live_...
+```
+
+```json
+{
+  "items": [
+    { "uirId": 114996, "addedAt": "2026-04-12T08:00:00Z", "order": 0 },
+    { "uirId": 26026,  "addedAt": "2026-04-12T08:00:05Z", "order": 1 },
+    { "uirId": 256265, "addedAt": "2026-04-12T08:01:10Z", "order": 2 }
+  ]
+}
+```
+
+The `order` field is a 0-based display position. Use it to render the
+list in the same order the user arranged it.
+
+## `POST /v1/watchlist`
+
+Add one or more instruments.
+
+```http
+POST /v1/watchlist
+Authorization: Bearer <user-token>
+x-api-key: vk_live_...
+Content-Type: application/json
+
+{
+  "instruments": [114996, 256265]
+}
+```
+
+| Field         | Type   | Required | Notes                              |
+| ------------- | ------ | -------- | ---------------------------------- |
+| `instruments` | int[]  | Yes      | 1 to 100 UIR ids.                  |
+| `append`      | bool   | No       | `true` (default) to append, `false` to replace. |
+
+```json
+{
+  "added":    [114996, 256265],
+  "skipped":  [],
+  "removed":  []
+}
+```
+
+`skipped` lists UIR ids that were already in the watchlist. `removed`
+lists UIR ids that were dropped (only used with `append=false`).
+
+## `DELETE /v1/watchlist/:uirId`
+
+Remove a single instrument.
+
+```http
+DELETE /v1/watchlist/114996
+Authorization: Bearer <user-token>
+x-api-key: vk_live_...
+```
+
+```json
+{ "removed": 114996, "watchlist": [26026, 256265] }
+```
+
+The response includes the new full watchlist so you can re-render
+without a follow-up `GET`.
+
+## `POST /v1/watchlist/reorder`
+
+Persist a new display order.
+
+```http
+POST /v1/watchlist/reorder
+Authorization: Bearer <user-token>
+x-api-key: vk_live_...
+Content-Type: application/json
+
+{
+  "order": [256265, 114996, 26026]
+}
+```
+
+| Field   | Type  | Required | Notes                                                |
+| ------- | ----- | -------- | ---------------------------------------------------- |
+| `order` | int[] | Yes      | Every UIR id in the watchlist, in the desired order. |
+
+```json
+{ "watchlist": [256265, 114996, 26026] }
+```
+
+If `order` is missing an id, or contains an id not in the watchlist,
+the request is rejected with `400 reorder_mismatch`.
+
+## Codes
+
+| Code | Meaning                                                   |
+| ---- | --------------------------------------------------------- |
+| 400  | `instruments` empty, or reorder mismatch.                |
+| 401  | Bearer token missing or invalid.                          |
+| 403  | `x-api-key` doesn't own the user.                         |
+| 404  | `DELETE` for an id not in the watchlist.                  |
+| 429  | Rate-limited. Honor `Retry-After`.                        |
+
+## Limits
+
+| Operation                  | Limit (per user)          |
+| -------------------------- | ------------------------- |
+| `GET`                      | 600 / 60 s                |
+| `POST`                     | 120 / 60 s                |
+| `DELETE`                   | 600 / 60 s                |
+| `reorder`                  | 60 / 60 s                 |
+| Watchlist size             | 1,000 UIR ids per user    |
+
+## Idempotency
+
+`POST` is **idempotent** in spirit but not in HTTP semantics. Sending
+the same body twice returns 200 the second time with all the ids in
+`skipped` and nothing in `added`. If you need at-most-once delivery
+across a retry, send a `Idempotency-Key` header — the platform
+dedupes on it for 5 minutes.
+
+`DELETE` is idempotent. Deleting an id that's not there returns 404.
+Use this to detect the case where two tabs race.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Hydrate from REST to live →](/watchlist/hydrate)
+</Callout>

@@ -1,0 +1,226 @@
+---
+title: Vedpragya Streams – Market data, made for builders
+description: Real-time market data API. Search instruments, stream live ticks over WebSocket, build watchlists in minutes.
+---
+
+import { Cards } from 'nextra/components';
+import { Tabs, Tab } from 'nextra/components';
+import { Callout } from 'nextra/components';
+
+<div className="home-hero">
+  <div className="home-hero__inner">
+    <span className="home-hero__eyebrow">VEDPRAGYA STREAMS · v1.0</span>
+    <h1 className="home-hero__title">
+      Real-time market data,<br />
+      <span className="grad">built for product engineers.</span>
+    </h1>
+    <p className="home-hero__lede">
+      One unified API to <b>search 200,000+ instruments</b>, <b>snapshot last
+      traded prices</b>, and <b>stream ticks in real time</b> over WebSocket.
+      CORS-first, JSON-everywhere, and predictable under load.
+    </p>
+    <div className="home-hero__cta">
+      <a href="/getting-started" className="btn btn-primary">Get an API key →</a>
+      <a href="/live-data" className="btn btn-ghost">See live data in action</a>
+    </div>
+    <div className="home-hero__stats">
+      <div>
+        <div className="home-hero__stat">200k+</div>
+        <div className="home-hero__stat-label">instruments searchable</div>
+      </div>
+      <div>
+        <div className="home-hero__stat">&lt; 30 ms</div>
+        <div className="home-hero__stat-label">search latency p50</div>
+      </div>
+      <div>
+        <div className="home-hero__stat">50k+</div>
+        <div className="home-hero__stat-label">ticks / second per stream</div>
+      </div>
+      <div>
+        <div className="home-hero__stat">99.95%</div>
+        <div className="home-hero__stat-label">historical uptime</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+## What you can build
+
+<Cards>
+  <Cards.Card title="Search-driven UI" href="/search">
+    Build a typeahead as fast as Google. Hit <code>/api/search</code> with a
+    ticker prefix; get back ranked results in &lt;30 ms.
+  </Cards.Card>
+  <Cards.Card title="Real-time price stream" href="/live-data">
+    Subscribe to NSE cash, futures, options, MCX, and crypto in a single
+    socket. Ticks flow in milliseconds; reconnection is automatic.
+  </Cards.Card>
+  <Cards.Card title="LTP-only dashboards" href="/instruments/ltp-snapshot">
+    Lightweight REST endpoint for last-traded prices. Perfect for portfolio
+    tiles, P&amp;L cards, and leaderboards.
+  </Cards.Card>
+  <Cards.Card title="Persistent watchlists" href="/watchlist">
+    CRUD endpoints, snapshot hydration, then real-time updates the moment
+    your user opens the page.
+  </Cards.Card>
+</Cards>
+
+## A 30-second tour
+
+<Tabs items={['Search', 'Snapshot LTP', 'Live stream']}>
+  <Tab>
+    ```bash
+    curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
+      -H "x-api-key: $STREAMS_KEY"
+    ```
+    ```json {4}
+    {
+      "results": [
+        {
+          "id": 26571,
+          "symbol": "RELIANCE",
+          "exchange": "NSE",
+          "instrumentType": "EQUITY",
+          "wsSubscribeUirId": 114996
+        }
+      ]
+    }
+    ```
+    [Full reference →](/search)
+  </Tab>
+  <Tab>
+    ```bash
+    curl -X POST "https://api.vedpragya.com/v1/instruments/ltp" \
+      -H "x-api-key: $STREAMS_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"instruments": [114996, 26026]}'
+    ```
+    ```json
+    {
+      "114996": { "lastPrice": 2347.10, "change": 0.82 },
+      "26026":  { "lastPrice": 23416.55, "change": -0.21 }
+    }
+    ```
+    [Snapshot endpoint →](/instruments/ltp-snapshot)
+  </Tab>
+  <Tab>
+    ```js
+    import { io } from 'socket.io-client';
+
+    const socket = io('https://stream.vedpragya.com', {
+      extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
+    });
+
+    socket.on('connect', () => {
+      socket.emit('subscribe', {
+        channel: 'market_data',
+        instruments: [114996, 26026],
+      });
+    });
+
+    socket.on('market_data', (tick) => {
+      console.log(tick.uirId, tick.lastPrice);
+    });
+    ```
+    [Live data reference →](/live-data)
+  </Tab>
+</Tabs>
+
+<Callout type="info" emoji="🛰">
+  All public endpoints are CORS-enabled. You can call them directly from a
+  browser. No proxy, no backend-of-your-own required for development.
+</Callout>
+
+## Why teams pick Streams
+
+- **Two identifier spaces, one consistent key.** Our internal Universal
+  Instrument Record (UIR) is stable across the data layer; the provider's
+  instrument token is opaque to your code. We resolve the join for you.
+- **No silent price drift.** Every tick is keyed to the same UIR your search
+  result returned. The price you saw in search is the price you'll see in
+  the live tick.
+- **Resilient by default.** Backpressure, reconnects, and stale-tick
+  detection are built in. You focus on the UI; we focus on the wire.
+- **Daily provider session refresh is automatic.** The platform handles the
+  underlying market data provider's daily access token refresh; you keep a
+  single long-lived API key.
+
+## Start building
+
+<Cards>
+  <Cards.Card title="Quickstart →" href="/getting-started" arrow />
+  <Cards.Card title="API reference →" href="/reference/http" arrow />
+  <Cards.Card title="Symbols & formats →" href="/symbols" arrow />
+  <Cards.Card title="Errors & edge cases →" href="/errors" arrow />
+</Cards>
+
+<style>{`
+  .home-hero {
+    background:
+      radial-gradient(1200px 600px at 50% -100px, rgba(99,102,241,0.18), transparent 60%),
+      radial-gradient(800px 400px at 80% 0px, rgba(6,182,212,0.12), transparent 60%);
+    padding: 64px 24px 80px;
+    margin: -24px -24px 48px;
+    border-radius: 18px;
+    border: 1px solid var(--sh-divider);
+  }
+  .home-hero__inner { max-width: 920px; margin: 0 auto; }
+  .home-hero__eyebrow {
+    display: inline-block;
+    font-size: 0.75rem; letter-spacing: 0.15em;
+    color: var(--sh-color-subtle);
+    background: var(--sh-tag-opacity);
+    padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--sh-divider);
+    margin-bottom: 16px;
+  }
+  .home-hero__title {
+    font-size: clamp(2.4rem, 4.5vw, 3.4rem);
+    line-height: 1.05; font-weight: 800; letter-spacing: -0.02em;
+    margin: 0 0 16px;
+  }
+  .grad {
+    background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .home-hero__lede {
+    font-size: 1.15rem; line-height: 1.55; max-width: 720px;
+    color: var(--sh-color-text);
+    opacity: 0.85; margin-bottom: 28px;
+  }
+  .home-hero__cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 18px; border-radius: 10px; font-weight: 600;
+    text-decoration: none !important; font-size: 0.95rem;
+    transition: transform 0.05s ease, background 0.15s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff !important;
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost {
+    border: 1px solid var(--sh-divider);
+    color: var(--sh-color-text) !important;
+    background: transparent;
+  }
+  .btn-ghost:hover { background: var(--sh-tag-opacity); }
+  .home-hero__stats {
+    display: grid; gap: 20px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  @media (max-width: 720px) {
+    .home-hero__stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  .home-hero__stat {
+    font-size: 1.6rem; font-weight: 700; line-height: 1.1;
+  }
+  .home-hero__stat-label {
+    font-size: 0.78rem; color: var(--sh-color-subtle);
+    letter-spacing: 0.04em; text-transform: uppercase; margin-top: 2px;
+  }
+`}</style>

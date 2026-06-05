@@ -1,0 +1,91 @@
+---
+title: Errors & edge cases
+description: The error model, the standard codes, and the trickier "the data is right but the UI is wrong" cases.
+---
+
+import { Callout } from 'nextra/components';
+
+# Errors & edge cases
+
+Most of this page is about behaviour that is *not* a fault. The platform
+is correct; the data is correct; the user's situation is just unusual.
+Knowing what to do in each case is the difference between a product
+that feels calm and a product that feels broken.
+
+## The error model
+
+Errors come back in three shapes, depending on the surface:
+
+### REST
+
+```json
+{
+  "error": "rate_limited",
+  "message": "60 requests per 60 s exceeded.",
+  "details": { "retryAfter": 1 },
+  "traceId": "01HXY..."
+}
+```
+
+| Field      | Notes                                                      |
+| ---------- | ---------------------------------------------------------- |
+| `error`    | Stable machine code. **Branch on this, not on `message`.** |
+| `message`  | Human-readable. Can change. Don't grep for it.             |
+| `details`  | Optional. Shape varies by `error`.                         |
+| `traceId`  | For support tickets. Always safe to log.                   |
+
+### WebSocket (`error` event)
+
+```json
+{
+  "code": "subscribe_too_many",
+  "message": "Maximum 1000 instruments per subscribe frame.",
+  "details": { "received": 1500, "limit": 1000 }
+}
+```
+
+Same shape, different envelope. `code` is the stable identifier.
+
+### `connect_error` (Socket.IO client)
+
+```js
+socket.on('connect_error', (err) => {
+  err.message;   // 'bad_api_key' | 'cors_blocked' | 'no_api_key' | …
+});
+```
+
+`err.message` carries the stable code as a string suffix. You can
+branch on it directly.
+
+## Status code cheat sheet
+
+| Code | Meaning                              | Action                                            |
+| ---- | ------------------------------------ | ------------------------------------------------- |
+| 200  | Success.                             | Render.                                           |
+| 400  | Bad request (malformed, missing).    | Fix the request. Don't retry.                     |
+| 401  | Auth missing or invalid.             | Re-issue / re-enter key.                          |
+| 403  | Auth valid but not allowed.          | Surface a permission error.                       |
+| 404  | Resource not found.                  | Treat as empty.                                   |
+| 409  | Conflict (e.g. duplicate).           | Read `details`.                                   |
+| 429  | Rate-limited.                        | Honor `Retry-After`. Exponential backoff.         |
+| 5xx  | Server error.                        | Retry with backoff. If persistent, file a ticket. |
+
+<Callout type="info" emoji="📜">
+  We do not return 5xx with a hardcoded body. The shape is always the
+  standard error envelope, with `traceId` populated.
+</Callout>
+
+## Sections
+
+<Cards>
+
+- [Common errors →](/errors/common)
+- [Tricky data cases →](/errors/data-cases)
+
+</Cards>
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Common errors →](/errors/common)
+</Callout>

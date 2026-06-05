@@ -1,0 +1,141 @@
+---
+title: Enriching results with live prices
+description: The "include=ohlcv" option, and the "search → snapshot → subscribe" pattern.
+---
+
+import { Callout } from 'nextra/components';
+
+# Enriching results with live prices
+
+The search response carries the **current** snapshot — `lastPrice`,
+`change`, `changePct`, `volume` — but only at query time. By the time
+the user reads the result, those values may be stale.
+
+Three patterns exist for getting a fresh quote alongside a search:
+
+## Pattern A: `include=ohlcv`
+
+```http
+GET /v1/search?q=NIFTY+23500+CE&include=ohlcv
+```
+
+The response adds an `ohlcv` field per result with today's open, high,
+low, close. `lastPrice` and `change` are still the snapshot-at-query-time
+values, but `ohlcv` is the provider's "what the chart says" for the
+day. Use this when you want to render a sparkline.
+
+```json
+{
+  "uirId": 114996,
+  "canonical": "NSE:RELIANCE",
+  "name": "Reliance Industries Limited",
+  "instrumentType": "EQUITY",
+  "priceStatus": "live",
+  "ohlcv": {
+    "open": 2331.50,
+    "high": 2350.00,
+    "low":  2325.40,
+    "close": 2341.10
+  }
+}
+```
+
+<Callout type="info" emoji="📊">
+  `ohlcv` is **per-request**. Don't poll `include=ohlcv` — use the
+  live WebSocket for streaming updates. The point of this option is to
+  avoid a second round-trip when you only need *today's* numbers.
+</Callout>
+
+## Pattern B: search → snapshot
+
+```js
+// 1. Search
+const search = await fetch(
+  `https://api.vedpragya.com/v1/search?q=${q}`,
+  { headers: { 'x-api-key': STREAMS_KEY } },
+).then((r) => r.json());
+
+// 2. Snapshot
+const ids = search.results.map((r) => r.uirId);
+const snap = await fetch('https://api.vedpragya.com/v1/instruments/ltp', {
+  method: 'POST',
+  headers: { 'x-api-key': STREAMS_KEY, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ instruments: ids }),
+}).then((r) => r.json());
+
+// 3. Merge
+const merged = search.results.map((row) => ({
+  ...row,
+  ...(snap[row.uirId] ?? {}),
+}));
+```
+
+The two calls add ~30 ms. Use this when the user is on a page that
+*isn't* also opening a WebSocket (e.g. a static search results page
+that has no watchlist).
+
+## Pattern C: search → snapshot → live
+
+The most complete pattern, and the one to use on the search-results
+page of a tickers app:
+
+```js
+async function openSearchResults(q) {
+  // 1. Search
+  const search = await fetch(/* … */).then((r) => r.json());
+  const ids = search.results.map((r) => r.uirId);
+
+  // 2. Snapshot
+  const snap = await fetch(/* … */).then((r) => r.json());
+
+  // 3. Render
+  render(search.results.map((r) => ({ ...r, ...(snap[r.uirId] ?? {}) })));
+
+  // 4. Open socket
+  const socket = io('https://stream.vedpragya.com', { /* … */ });
+  socket.on('connect', () => {
+    socket.emit('subscribe', { channel: 'market_data', instruments: ids });
+  });
+  socket.on('market_data', (tick) => applyTick(tick));
+}
+```
+
+## When `lastPrice` is `null` in a search result
+
+`null` means "no quote available right now". This is *not* an error.
+Render a distinct empty state — don't render `0`, don't render the
+previous close, don't render a stale price from a different instrument.
+
+The most common causes are:
+- The market is closed (`priceStatus: 'closed'`).
+- The instrument is in pre-open (`priceStatus: 'pre_open'`).
+- The instrument is halted (`priceStatus: 'halted'`).
+- The instrument was just listed and the provider hasn't seen a trade
+  yet.
+
+In all four cases, the platform is doing the right thing. The fix is
+on your side: render the right state.
+
+## When the live feed is *not* needed
+
+If your search results page is purely informational (a "find a
+contract" page that the user reads for a moment before picking one
+and navigating away), you don't need a WebSocket at all. The
+`include=ohlcv` option, plus a static render, is enough.
+
+WebSocket is for the page the user *stays* on.
+
+## A note on cross-origin results
+
+If your search results page is on a different origin than the API
+(e.g. the docs site is at `docs.vedpragya.com` and the API is at
+`api.vedpragya.com`), the browser will block direct calls unless
+CORS is configured for the docs origin. Most customers don't add the
+docs site to the allowlist; do your search/snapshot calls from your
+own backend instead.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Query parameters →](/search/parameters)
+</Callout>

@@ -1,0 +1,157 @@
+---
+title: Response shape
+description: The exact JSON the search endpoint returns, field by field.
+---
+
+import { Callout } from 'nextra/components';
+
+# Response shape
+
+The search endpoint always returns the same shape. We do not vary fields
+by query or instrument type — empty values are present-but-null.
+
+## Top-level
+
+```json
+{
+  "query": "NIFTY 23500 CE",
+  "total": 1,
+  "results": [ { /* Result */ } ],
+  "facets": {
+    "exchange": { "NFO": 1 },
+    "type":     { "CE":  1 }
+  },
+  "took": 12
+}
+```
+
+| Field     | Type     | Notes                                                |
+| --------- | -------- | ---------------------------------------------------- |
+| `query`   | string   | The original `q`, after normalisation.               |
+| `total`   | integer  | Total matches. May exceed `results.length`.          |
+| `results` | Result[] | Up to `limit` results.                               |
+| `facets`  | object   | Counts of how many of the total match each facet.    |
+| `took`    | integer  | Server-side query time in milliseconds.              |
+
+<Callout type="info" emoji="🔍">
+  `total` is the count *before* `limit`/`offset` are applied. If you
+  paginate, divide by `limit` to get the page count.
+</Callout>
+
+## `Result`
+
+```json
+{
+  "uirId": 114996,
+  "canonical": "NSE:RELIANCE",
+  "name": "Reliance Industries Limited",
+  "exchange": "NSE",
+  "instrumentType": "EQUITY",
+  "lotSize": 1,
+  "tickSize": 0.05,
+  "priceStatus": "live",
+  "lastPrice": 2347.10,
+  "change": 6.00,
+  "changePct": 0.26,
+  "volume": 12403201,
+  "isin": "INE002A01018"
+}
+```
+
+| Field            | Type    | Notes                                                              |
+| ---------------- | ------- | ------------------------------------------------------------------ |
+| `uirId`          | integer | **The only field your code should keep.**                          |
+| `canonical`      | string  | `EXCHANGE:SYMBOL`. Display-only.                                   |
+| `name`           | string  | Human-readable. May differ from the canonical symbol.              |
+| `exchange`       | string  | `NSE`, `BSE`, `MCX`, `CDS`, `NFO`, `BFO`.                          |
+| `instrumentType` | string  | `EQUITY`, `INDEX`, `FUT`, `CE`, `PE`, `COMMODITY`, `CURRENCY`.      |
+| `lotSize`        | integer | Lot size (derivatives). 1 for cash.                                |
+| `tickSize`       | number  | Smallest price increment.                                          |
+| `priceStatus`    | string  | `live`, `closed`, `halted`, `pre_open`. See below.                 |
+| `lastPrice`      | number? | Most recent trade. `null` if no quote available.                   |
+| `change`         | number? | `lastPrice - close`. `null` if no quote.                           |
+| `changePct`      | number? | `(change / close) * 100`. `null` if no quote.                      |
+| `volume`         | integer?| Cumulative traded volume. `null` if no quote.                      |
+| `isin`           | string? | ISIN (equities only).                                              |
+
+## When `priceStatus` matters
+
+| `priceStatus`  | Meaning                                                              |
+| -------------- | -------------------------------------------------------------------- |
+| `live`         | The platform has a current quote. Tick feed is active.               |
+| `pre_open`     | The instrument exists and has a pre-open session but no live ticks.  |
+| `closed`       | The market for this instrument is closed for the day (or expired).   |
+| `halted`       | Trading is paused. The platform will resume ticks when trading does. |
+| `delisted`     | The contract has been delisted. It is in the catalogue for historical reference only. |
+
+<Callout type="info" emoji="📋">
+  When the `priceStatus` is not `live`, `lastPrice`, `change`,
+  `changePct`, and `volume` are all `null`. Render a "no quote" state
+  — don't render `0`.
+</Callout>
+
+## Fields that can be absent
+
+| Field         | When absent                                                   |
+| ------------- | ------------------------------------------------------------- |
+| `name`        | The catalogue doesn't have a long-form name.                  |
+| `lotSize`     | Only meaningful for derivatives.                              |
+| `tickSize`    | Only meaningful for instruments with a tick size.             |
+| `lastPrice`   | No current quote.                                             |
+| `change`      | No current quote.                                             |
+| `changePct`   | No current quote.                                             |
+| `volume`      | No current quote.                                             |
+| `isin`        | Not an equity.                                                |
+
+## A note on `name` vs `canonical`
+
+`canonical` is the trading symbol (the round-trip identifier). `name`
+is the company or contract name. For NIFTY options, `canonical` is
+`NFO:NIFTY 23500 CE 28 NOV 24` and `name` is `NIFTY 23500 CE 28 NOV 24`
+(typically the same string; the contract has no "company" in the way
+RELIANCE does).
+
+Always render `name` in the UI. Use `canonical` only for things like the
+URL bar.
+
+## Example: a search for "RELIANCE"
+
+```bash
+curl "https://api.vedpragya.com/v1/search?q=RELIANCE&exchange=NSE" \
+  -H "x-api-key: $STREAMS_KEY"
+```
+
+```json
+{
+  "query": "RELIANCE",
+  "total": 2,
+  "results": [
+    {
+      "uirId": 114996,
+      "canonical": "NSE:RELIANCE",
+      "name": "Reliance Industries Limited",
+      "exchange": "NSE",
+      "instrumentType": "EQUITY",
+      "lotSize": 1,
+      "tickSize": 0.05,
+      "priceStatus": "live",
+      "lastPrice": 2347.10,
+      "change": 6.00,
+      "changePct": 0.26,
+      "volume": 12403201,
+      "isin": "INE002A01018"
+    }
+  ],
+  "facets": { "exchange": { "NSE": 1, "BSE": 1 }, "type": { "EQUITY": 2 } },
+  "took": 7
+}
+```
+
+The `BSE:RELIANCE` row is hidden by the `exchange=NSE` filter but
+appears in the facet count.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Enriching results with live prices →](/search/live-prices)
+</Callout>

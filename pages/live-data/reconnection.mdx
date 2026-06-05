@@ -1,0 +1,196 @@
+---
+title: Reconnection & resilience
+description: How the gateway behaves during disconnects, what the client should do, and the two patterns that hold up.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Reconnection & resilience
+
+The gateway treats every disconnect as a recoverable failure. Your client
+should too. This page covers what the gateway does for you, and what you
+should do in your code.
+
+## What the gateway does
+
+| Behaviour                                | Detail                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------- |
+| **Auto-reconnect**                       | Socket.IO client transparently reconnects with exponential backoff.      |
+| **Subscription replay**                  | On reconnect, the gateway replays your prior subscription set.            |
+| **Tick replay window**                   | The last **60 seconds** of ticks are replayed in order.                   |
+| **Sequence numbers**                     | `seq` resets to 0 on a fresh subscription. Use it to dedupe.               |
+| **Idle close**                           | 5 minutes with no subscribe/unsubscribe → `idle_timeout`.                  |
+| **Ping/pong**                            | 25-second heartbeat.                                                      |
+| **Origin allowlist**                     | Browsers from disallowed origins are refused at handshake.               |
+| **Provider session refresh**             | Invisible. The platform's underlying market data session is refreshed server-side. |
+
+## What your client must do
+
+### 1. Track the local "intended" subscription set
+
+```js
+const intended = new Set();
+
+function subscribeTo(id) {
+  intended.add(id);
+  socket.emit('subscribe', { channel: 'market_data', instruments: [id] });
+}
+
+function unsubscribeFrom(id) {
+  intended.delete(id);
+  socket.emit('unsubscribe', { channel: 'market_data', instruments: [id] });
+}
+```
+
+This is the source of truth. On reconnect, the gateway re-emits
+`subscription_state` and you can verify.
+
+### 2. On reconnect, re-emit
+
+```js
+socket.on('connect', () => {
+  if (intended.size > 0) {
+    socket.emit('subscribe', {
+      channel: 'market_data',
+      instruments: [...intended],
+    });
+  }
+});
+```
+
+The platform dedupes `subscribe` frames, so re-emitting the full set is
+safe and idempotent.
+
+### 3. Drop late ticks via `seq`
+
+```js
+const lastSeq = new Map();        // uirId -> seq
+
+socket.on('market_data', (tick) => {
+  const prev = lastSeq.get(tick.uirId) ?? 0;
+  if (tick.seq <= prev) return;   // duplicate or out-of-order
+  lastSeq.set(tick.uirId, tick.seq);
+  render(tick);
+});
+```
+
+### 4. Surface `connect_error` to the user
+
+```js
+socket.on('connect_error', (err) => {
+  if (err.message?.includes('cors_blocked')) {
+    showError('This domain is not allowed. Add it to your CORS allowlist.');
+  } else if (err.message?.includes('bad_api_key')) {
+    showError('API key is invalid. Rotate it in the admin panel.');
+  } else {
+    showError('Live data temporarily unavailable. Retrying…');
+  }
+});
+```
+
+## Two patterns that hold up
+
+### Pattern A: `snapshot → socket`
+
+The most common production pattern. It works on flaky networks because
+each paint is correct *on its own*.
+
+```js
+async function openWatchlist(ids) {
+  // 1. Paint the current state from REST. The page is never empty.
+  const snapshot = await fetchLtp(ids);
+  renderRows(snapshot);
+
+  // 2. Open the socket and let ticks overwrite.
+  const socket = io('https://stream.vedpragya.com', { /* … */ });
+  socket.on('connect', () => {
+    socket.emit('subscribe', { channel: 'market_data', instruments: ids });
+  });
+  socket.on('market_data', (tick) => applyTick(tick));
+}
+```
+
+### Pattern B: `socket → snapshot → socket`
+
+For slow networks, open the socket first, then paint the snapshot
+*while* ticks are coming in.
+
+```js
+async function openWatchlist(ids) {
+  const socket = io('https://stream.vedpragya.com', { /* … */ });
+  socket.on('connect', () => {
+    socket.emit('subscribe', { channel: 'market_data', instruments: ids });
+  });
+  socket.on('market_data', (tick) => applyTick(tick));
+
+  // Now paint the snapshot. Ticks that arrived before this point have
+  // already been applied; the snapshot fills in any rows the gateway
+  // couldn't deliver a tick for (e.g. halted instruments).
+  const snapshot = await fetchLtp(ids);
+  hydrate(snapshot);     // only fills missing values
+}
+```
+
+The two patterns differ in whether the page first paints with the
+"snapshot only" state, or with a "ticks in flight, snapshot incoming"
+state. Both are correct.
+
+## Tick replay caveat
+
+The gateway replays the last 60 seconds of ticks on reconnect. **You
+should not rely on this for true at-least-once delivery** — if a
+subscription is paused for longer than the replay window, you will see
+gaps. The right way to handle a long pause is to re-hydrate from
+`/v1/instruments/ltp` on reconnect.
+
+## What not to do
+
+- **Don't reconnect manually.** Let Socket.IO do it.
+- **Don't unsubscribe on disconnect.** The gateway remembers your
+  subscription set server-side.
+- **Don't issue a `subscribe` frame more than 4 times per second.** The
+  platform rate-limits you.
+- **Don't use `transports: ['polling']`.** Skip the long-poll upgrade;
+  use WebSocket from the start.
+
+## Reconnection flow, in a diagram
+
+```
+            ┌────────────┐
+            │  connect   │
+            └────┬───────┘
+                 │
+                 ▼
+         emit subscribe(ids)
+                 │
+                 ▼
+         subscription_state {ids}
+                 │
+   ┌─────────────┴───────────────┐
+   │                             │
+   ▼                             ▼
+market_data ticks         market_data ticks
+   │                             │
+   │        network hiccup        │
+   ▼                             │
+disconnect ◄──────────────────────┘
+   │
+   │   (auto-reconnect, exp. backoff)
+   ▼
+connect (re-emit subscribe)
+   │
+   ▼
+subscription_state {ids}    ← server's view
+   │
+   ▼
+replay last 60 s of ticks (seq continues)
+   │
+   ▼
+live ticks
+```
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Watchlist →](/watchlist)
+</Callout>

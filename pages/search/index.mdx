@@ -1,0 +1,78 @@
+---
+title: Search
+description: Typeahead-grade full-text search across 200,000+ instruments. Prefix-match, typo-tolerant, and identifier-aware.
+---
+
+import { Callout, Tabs, Tab, Steps } from 'nextra/components';
+
+# Search
+
+`GET /v1/search` is the workhorse. It powers typeahead, the symbol picker on
+the watchlist dialog, the search bar in your dashboard, and pretty much any
+"user is typing, give me ranked results" interaction.
+
+It is **identifier-aware**: typing `NIFTY 23500 CE` finds the right option
+contract. Typing `BANKNIFTY FUT` finds the right futures root. Typing
+`RELIANCE` finds the right equity even if the index underneath it does not
+match.
+
+## A 5-line example
+
+```js
+async function search(q) {
+  const r = await fetch(
+    `https://api.vedpragya.com/v1/search?q=${encodeURIComponent(q)}`,
+    { headers: { 'x-api-key': STREAMS_KEY } },
+  );
+  return (await r.json()).results;
+}
+
+search('RELI');   // → [RELIANCE, RELIANCE INDUSTRIES, …]
+search('NIFTY 50'); // → [NIFTY 50 index, NIFTY 50 futures root, …]
+```
+
+## Performance
+
+| Metric             | Target  | Actual p99          |
+| ------------------ | ------- | ------------------- |
+| Latency            | < 50 ms | ~30 ms (p50)        |
+| Throughput         | —       | 5,000 RPS sustained |
+| Index size         | —       | 200,000+ records    |
+| Snippet generation | off     | never on the hot path |
+
+The index is rebuilt every 15 minutes from the underlying provider's
+instruments catalogue. **You should not need to refresh the catalogue on
+your side** — we mirror it.
+
+## Three things to know
+
+<Steps>
+
+### Identifier-aware ranking
+
+The ranker understands:
+
+- **Tickers** (`RELIANCE`, `HDFCBANK`)
+- **Canonical prefix** (`NSE:RELIANCE`, `NSE_EQ|RELIANCE`)
+- **Derivative shorthand** (`NIFTY 23500 CE`, `BANKNIFTY FUT 28 NOV 24`)
+- **Index names** (`NIFTY 50`, `SENSEX`, `BANKNIFTY`)
+- **Token space** (provider's instrument token — but you don't need this)
+
+### Stable UIR ids
+
+Each result has a numeric `id` (the **Universal Instrument Record**). The id
+is stable for the life of the contract. Cache it; pass it to the live feed
+later.
+
+### Empty-on-stale
+
+If the underlying provider doesn't recognise an instrument, the search
+silently omits it. You never get a hit for a contract that doesn't exist.
+
+</Steps>
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Query parameters](/search/parameters)
+</Callout>

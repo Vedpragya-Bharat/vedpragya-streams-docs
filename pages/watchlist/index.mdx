@@ -1,0 +1,73 @@
+---
+title: Watchlist
+description: Persist a list of UIR ids per user, then hydrate from REST and live-update from the WebSocket.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Watchlist
+
+The watchlist API is a tiny per-user store of UIR ids. It does not store
+prices — those come from the snapshot endpoint and the live stream. It
+just remembers the symbols the user is interested in.
+
+## Endpoints
+
+| Method | Path                       | Purpose                                          |
+| ------ | -------------------------- | ------------------------------------------------ |
+| GET    | `/v1/watchlist`            | List the current user's watchlist.               |
+| POST   | `/v1/watchlist`            | Add one or more instruments.                     |
+| DELETE | `/v1/watchlist/:uirId`     | Remove a single instrument.                      |
+| POST   | `/v1/watchlist/reorder`    | Update the display order.                        |
+
+## Authentication
+
+Watchlist endpoints are **per-user**. The `x-api-key` is the customer's
+key; the user identity comes from the `Authorization: Bearer <token>`
+header (your own session token, not a Streams token). Streams stores
+watchlist rows keyed by the `userId` claim of your bearer token.
+
+If you do not have a per-user bearer system, you can use the API in
+"single-user mode" by sending `userId: "default"` in the body or query
+string. The platform stores one watchlist for `userId=default` per
+customer.
+
+## Caching
+
+The watchlist is **read-through cached** for 30 seconds. After a
+`POST` or `DELETE`, the cache for that user is invalidated. The next
+`GET` repopulates from the source of truth.
+
+<Callout type="info" emoji="⚡">
+  The cache is per-user, per-region. A user in Mumbai and a user in
+  Singapore may see slightly different stale windows, but never see
+  each other's data.
+</Callout>
+
+## The "hydrate then live" pattern
+
+The watchlist API pairs with `/v1/instruments/ltp` and the live WebSocket
+to form a clean three-step pattern:
+
+1. **GET** `/v1/watchlist` → `[114996, 26026, ...]` (a list of UIR ids).
+2. **POST** `/v1/instruments/ltp` with those ids → first paint.
+3. **Open WebSocket**, `subscribe` to those ids, receive `market_data`
+   events for each change.
+
+This is the canonical flow. See
+[Hydrate from REST to live →](/watchlist/hydrate) for the full code.
+
+## What the watchlist is *not*
+
+- It is **not** an alert system. (Use the `alerts` namespace — not yet
+  public — for that.)
+- It is **not** a price store. Prices are computed on demand and are
+  always fresh.
+- It is **not** sharable. There is no "share my watchlist with a friend"
+  endpoint. If you want that, build it on top of your own backend.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Add & remove →](/watchlist/add-remove)
+</Callout>

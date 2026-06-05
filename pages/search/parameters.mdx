@@ -1,0 +1,90 @@
+---
+title: Query parameters
+description: Every field you can pass to /v1/search and what it does.
+---
+
+import { Callout } from 'nextra/components';
+import { TryIt } from '../../components/TryIt';
+
+# Query parameters
+
+```
+GET /v1/search?q=RELIANCE&exchange=NSE&type=EQUITY&limit=10
+```
+
+## Field reference
+
+| Name        | Type    | Required | Default     | Notes                                                                |
+| ----------- | ------- | -------- | ----------- | -------------------------------------------------------------------- |
+| `q`         | string  | Yes      | —           | The user query. Already-prefix and fuzzy are both fine.              |
+| `exchange`  | string  | No       | (any)       | Comma-separated. Allowed: `NSE`, `BSE`, `MCX`, `CDS`, `NFO`, `BFO`. |
+| `type`      | string  | No       | (any)       | `EQUITY`, `INDEX`, `FUT`, `CE`, `PE`, `COMMODITY`, `CURRENCY`.       |
+| `limit`     | int     | No       | `10`        | 1 to 50.                                                             |
+| `offset`    | int     | No       | `0`         | 0 to 10000. Pagination, not cursor.                                  |
+| `sort`      | string  | No       | `relevance` | `relevance`, `name`, `volume`, `change_pct`.                        |
+| `priceStatus` | string | No      | `any`       | `live`, `closed`, `any`. Filters by venue status.                   |
+| `include`   | string  | No       | —           | `ohlcv` returns today's open/high/low/close/volume alongside.        |
+
+<Callout type="info" emoji="💡">
+  `include=ohlcv` adds a few KB per row; skip it on the typeahead and use
+  [`/v1/instruments/ltp`](/instruments/ltp-snapshot) for the LTP enrichment
+  on selection.
+</Callout>
+
+## Examples
+
+### Typeahead for NSE equities only
+
+```bash
+curl "https://api.vedpragya.com/v1/search?q=REL&exchange=NSE&type=EQUITY&limit=5" \
+  -H "x-api-key: $STREAMS_KEY"
+```
+
+### Search the option chain by underlying
+
+```bash
+curl "https://api.vedpragya.com/v1/search?q=NIFTY+23500&exchange=NFO" \
+  -H "x-api-key: $STREAMS_KEY"
+```
+
+### Sort by top-gainers
+
+```bash
+curl "https://api.vedpragya.com/v1/search?q=&exchange=NSE&type=EQUITY&sort=change_pct&limit=20" \
+  -H "x-api-key: $STREAMS_KEY"
+```
+
+<Callout type="warning" emoji="⚠️">
+  `q` is technically optional when `sort` is set, but the typeahead-style
+  search requires a non-empty `q`. If you need a "show me top movers"
+  screen, use `q=` (empty) plus a `sort` and a tight `limit`.
+</Callout>
+
+## Error modes
+
+| Code | Meaning                                       | What to do                       |
+| ---- | --------------------------------------------- | -------------------------------- |
+| 400  | `q` missing and no `sort` set                 | Pass at least one.               |
+| 401  | API key missing or invalid                    | Re-issue from admin panel.       |
+| 429  | Rate limit hit                                | Honor `Retry-After`.             |
+| 5xx  | Index unavailable                             | Retry with backoff; report if persistent. |
+
+## Try it
+
+<TryIt
+  method="GET"
+  url="https://api.vedpragya.com/v1/search"
+  apiKeyHint="vk_live_..."
+  params={[
+    { name: 'q', label: 'Query', default: 'NIFTY 23500 CE', placeholder: 'NIFTY 23500 CE' },
+    { name: 'exchange', default: 'NFO', placeholder: 'NSE, NFO, …' },
+    { name: 'limit', default: '5', placeholder: '5' },
+  ]}
+  description="Search for an option contract. Adjust the query and exchange; the response lists matching UIR ids."
+/>
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Response shape](/search/response)
+</Callout>

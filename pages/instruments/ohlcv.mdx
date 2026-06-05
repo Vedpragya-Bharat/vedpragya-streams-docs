@@ -1,0 +1,151 @@
+---
+title: OHLCV & history
+description: Intraday and end-of-day candles, with a note on adjusted vs raw prices.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# OHLCV & history
+
+`GET /v1/instruments/ohlcv` returns OHLCV candles for a single UIR id.
+It supports both intraday and end-of-day (EOD) intervals.
+
+## Intervals
+
+| Interval | Use case                                   | Notes                                  |
+| -------- | ------------------------------------------ | -------------------------------------- |
+| `1m`     | Tick charts, scalping.                     | First 30 minutes of session only by default; backfill on request. |
+| `5m`     | Intraday charts.                           | Full session.                          |
+| `15m`    | Swing intraday.                            | Full session.                          |
+| `30m`    | Wider swing.                               | Full session.                          |
+| `1h`     | Hourly.                                    | Full session.                          |
+| `1d`     | End-of-day.                                | Available for ~10 years.               |
+| `1w`     | Weekly.                                    | Friday close.                          |
+| `1M`     | Monthly.                                   | Month-end close.                       |
+
+## Request
+
+```http
+GET /v1/instruments/ohlcv?instrument=114996&interval=5m&from=2026-06-04T03:45:00Z&to=2026-06-04T10:00:00Z
+x-api-key: vk_live_...
+```
+
+| Param        | Type     | Required | Notes                                                          |
+| ------------ | -------- | -------- | -------------------------------------------------------------- |
+| `instrument` | integer  | Yes      | UIR id.                                                        |
+| `interval`   | string   | Yes      | See intervals table.                                           |
+| `from`       | datetime | Yes      | ISO-8601 UTC.                                                  |
+| `to`         | datetime | Yes      | ISO-8601 UTC.                                                  |
+| `adjusted`   | bool     | No       | `true` (default) applies corporate-action adjustment.          |
+| `limit`      | int      | No       | 5,000 max.                                                     |
+
+## Response
+
+```json
+{
+  "instrument": 114996,
+  "interval": "5m",
+  "adjusted": true,
+  "candles": [
+    { "t": "2026-06-04T03:45:00Z", "o": 2331.50, "h": 2340.00, "l": 2328.10, "c": 2338.20, "v": 124031 },
+    { "t": "2026-06-04T03:50:00Z", "o": 2338.20, "h": 2342.10, "l": 2335.00, "c": 2341.10, "v":  87921 }
+  ]
+}
+```
+
+| Field | Type     | Notes                                                                |
+| ----- | -------- | -------------------------------------------------------------------- |
+| `t`   | string   | Candle start (UTC).                                                  |
+| `o`   | number   | Open.                                                                |
+| `h`   | number   | High.                                                                |
+| `l`   | number   | Low.                                                                 |
+| `c`   | number   | Close.                                                               |
+| `v`   | integer  | Volume in shares/contracts/lots as appropriate.                      |
+
+## Adjusted vs raw
+
+Corporate actions (splits, bonuses, dividends) affect historical prices.
+The platform supports two views:
+
+- **Adjusted** (`adjusted=true`, default) — historical OHLCV is
+  back-applied so a chart "looks right" across a split boundary.
+  Computed once at catalogue build time. Free.
+- **Raw** (`adjusted=false`) — historical OHLCV is *exactly what
+  happened on the day*. A 1:10 bonus issue shows up as a sudden
+  10× jump.
+
+<Callout type="warning" emoji="⚠️">
+  Commit to one mode per chart. Mixing adjusted and raw on the same
+  chart causes "the line jumps at the bonus issue" artifacts.
+</Callout>
+
+### When to use raw
+
+- Backtests. Your strategy needs to know the actual price, not the
+  adjusted one.
+- Tax / accounting. Adjusted prices can mislead on cost-basis calcs.
+- Corporate action reconstruction. Only raw tells you what really
+  happened.
+
+### When to use adjusted
+
+- Any chart a user is looking at. The eye expects "the line doesn't
+  jump" on splits/bonuses.
+- Any "what would I have made" metric.
+- Comparing two stocks across a long time window.
+
+## Limits
+
+| Interval | Lookback   | Notes                                  |
+| -------- | ---------- | -------------------------------------- |
+| `1m`     | 1 session  | Backfill to 30 days is request-only.   |
+| `5m`     | 30 days    |                                        |
+| `15m`    | 90 days    |                                        |
+| `30m`    | 180 days   |                                        |
+| `1h`     | 1 year     |                                        |
+| `1d`     | 10 years   |                                        |
+| `1w`     | 20 years   |                                        |
+| `1M`     | 50 years   |                                        |
+
+If you need more, contact support. The data is there; the per-key
+bandwidth isn't always.
+
+## How candles are computed
+
+Intraday candles are computed server-side from the tick stream, with
+the candle's start as the anchor. The candle is closed and immutable
+once the next candle's first tick arrives.
+
+Daily candles are computed at the end of the session, after the
+provider's "closing print" is in. They are immutable from that point.
+
+## Errors
+
+| Code | Meaning                                                  |
+| ---- | -------------------------------------------------------- |
+| 400  | `interval` invalid, or `from > to`.                      |
+| 404  | UIR id unknown.                                          |
+| 429  | Rate-limited.                                             |
+| 5xx  | Storage backpressure. Retry.                             |
+
+## A small plotting helper
+
+```js
+async function getCandles(uirId, interval, from, to) {
+  const r = await fetch(
+    `https://api.vedpragya.com/v1/instruments/ohlcv?instrument=${uirId}` +
+      `&interval=${interval}&from=${encodeURIComponent(from)}` +
+      `&to=${encodeURIComponent(to)}`,
+    { headers: { 'x-api-key': STREAMS_KEY } },
+  );
+  if (!r.ok) throw new Error(`ohlcv ${r.status}`);
+  const { candles } = await r.json();
+  return candles;          // [{ t, o, h, l, c, v }, ...]
+}
+```
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Canonical instrument format →](/instruments/canonical-format)
+</Callout>

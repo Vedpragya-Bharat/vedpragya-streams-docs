@@ -1,0 +1,140 @@
+---
+title: Subscribe to ticks
+description: The subscribe and unsubscribe frames, the subscription_confirmed ack, and the limits.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+import { TryIt } from '../../components/TryIt';
+
+# Subscribe to ticks
+
+There are exactly two outbound frames you need to know: `subscribe` and
+`unsubscribe`.
+
+## `subscribe`
+
+```json
+{
+  "channel": "market_data",
+  "instruments": [114996, 26026, 256265]
+}
+```
+
+| Field         | Type    | Required | Notes                                                       |
+| ------------- | ------- | -------- | ----------------------------------------------------------- |
+| `channel`     | string  | Yes      | Currently always `"market_data"`.                           |
+| `instruments` | int[]   | Yes      | UIR ids. 1 to 1,000 per call.                               |
+| `mode`        | string  | No       | `"snapshot"` (default), `"ltp"`, `"quote"`, `"full"`.        |
+
+### Modes
+
+| Mode        | What you get                                                                                  |
+| ----------- | --------------------------------------------------------------------------------------------- |
+| `ltp`       | `lastPrice`, `ts` only. Smallest payload. Use for tickers and watchlist rows.                 |
+| `quote`     | LTP + OHLC + volume + change. Default mode.                                                    |
+| `full`      | Quote + market depth (top 5 bids/asks) + OI + IV. Heaviest. Use for option chains.             |
+| `snapshot`  | Alias for `quote`. Emits one frame per id with the current state, then no more.               |
+
+The gateway confirms each `subscribe` frame with a
+`subscription_confirmed` event that lists the ids it could resolve, the
+ids it could not, and the mode.
+
+```json
+{
+  "channel": "market_data",
+  "mode": "quote",
+  "confirmed": [114996, 26026],
+  "unresolved": [99999999],
+  "forbidden": []
+}
+```
+
+| Field         | Meaning                                                              |
+| ------------- | -------------------------------------------------------------------- |
+| `confirmed`   | The UIR ids that are now subscribed.                                 |
+| `unresolved`  | The UIR ids that the platform could not resolve.                     |
+| `forbidden`   | The UIR ids that the platform resolved but your key cannot access.  |
+
+<Callout type="info" emoji="✅">
+  Use `confirmed` to update your local state. `unresolved` and `forbidden`
+  are diagnostic — the platform never silently drops an id.
+</Callout>
+
+## `unsubscribe`
+
+```json
+{
+  "channel": "market_data",
+  "instruments": [114996]
+}
+```
+
+The same shape as `subscribe`. Confirmed with a
+`subscription_confirmed` event whose `confirmed` list is empty (because
+the instruments are no longer subscribed). The platform always echoes
+the `unresolved` and `forbidden` fields for consistency.
+
+## A pattern: `subscribe` and forget
+
+The gateway dedupes subscribe frames. If you call `subscribe` with the
+same id twice, the platform remembers only one subscription. The
+`subscription_confirmed` ack lists the id each time (because you asked)
+but does not double-count the deliver path.
+
+This means you can re-emit your full instrument list on every reconnect
+and trust the gateway to dedupe.
+
+## Re-subscribing after reconnect
+
+```js
+let subscribedIds = [];
+
+function rehydrate(socket) {
+  socket.emit('subscribe', {
+    channel: 'market_data',
+    instruments: subscribedIds,
+    mode: 'quote',
+  });
+}
+
+socket.on('connect', () => rehydrate(socket));
+
+// Whenever the user adds a row to the watchlist…
+function addToWatch(id) {
+  subscribedIds.push(id);
+  socket.emit('subscribe', {
+    channel: 'market_data',
+    instruments: [id],
+    mode: 'quote',
+  });
+}
+```
+
+## Limits
+
+| Limit                              | Value                |
+| ---------------------------------- | -------------------- |
+| Instruments per `subscribe`        | 1,000                |
+| Total instruments per socket       | 1,000                |
+| `subscribe` rate (per key)         | 60 / 60 s            |
+| `subscribe` burst                  | 4 / 1 s              |
+| Subscription lifetime              | Until socket dies or `unsubscribe` |
+| Idle (no subscribe/unsubscribe)    | 5 min → `idle_timeout` close |
+
+## Why we never emit ticks for unresolved ids
+
+If you `subscribe` with `[114996, 99999999]`, you'll get a
+`subscription_confirmed` with `confirmed: [114996], unresolved: [99999999]`.
+The platform will **not** emit a `market_data` frame for the unresolved
+id. It will also not emit a frame for the resolved id until a real tick
+arrives from the underlying provider.
+
+If you never see a `market_data` for an id that's in your `confirmed`
+list, the underlying market is probably closed. See
+[priceStatus](/search/response#when-pricestatus-matters).
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Event reference →](/live-data/events)
+</Callout>

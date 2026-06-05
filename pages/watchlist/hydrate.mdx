@@ -1,0 +1,198 @@
+---
+title: Hydrate from REST to live
+description: The full pattern: load the watchlist, snapshot, then subscribe to ticks.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# Hydrate from REST to live
+
+This page shows the **complete** code path for a watchlist page that
+loads fast, looks correct on first paint, and updates in real time
+without flicker.
+
+## The three steps
+
+<Steps>
+
+### 1. Load the watchlist ids
+
+```js
+const r = await fetch('https://api.vedpragya.com/v1/watchlist', {
+  headers: {
+    'x-api-key': STREAMS_KEY,
+    'Authorization': `Bearer ${USER_TOKEN}`,
+  },
+});
+const { items } = await r.json();
+const ids = items.map((i) => i.uirId);
+```
+
+### 2. Snapshot the prices
+
+```js
+const snapR = await fetch('https://api.vedpragya.com/v1/instruments/ltp', {
+  method: 'POST',
+  headers: {
+    'x-api-key': STREAMS_KEY,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ instruments: ids }),
+});
+const snap = await snapR.json();        // { "114996": {...}, "26026": {...} }
+```
+
+### 3. Open the socket, subscribe, listen
+
+```js
+const socket = io('https://stream.vedpragya.com', {
+  extraHeaders: { 'x-api-key': STREAMS_KEY },
+  transports: ['websocket'],
+});
+
+socket.on('connect', () => {
+  socket.emit('subscribe', {
+    channel: 'market_data',
+    instruments: ids,
+  });
+});
+
+socket.on('market_data', (tick) => {
+  // Update only the row that changed.
+  updateRow(tick.uirId, tick);
+});
+```
+
+</Steps>
+
+## A self-contained React component
+
+```tsx
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+
+type Row = {
+  uirId: number;
+  symbol: string;
+  lastPrice?: number;
+  change?: number;
+  changePct?: number;
+  ts?: string;
+};
+
+export function Watchlist({ apiKey, userToken }: { apiKey: string; userToken: string }) {
+  const [rows, setRows] = useState<Row[]>([]);
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function open() {
+      // 1. Watchlist ids
+      const wl = await fetch('https://api.vedpragya.com/v1/watchlist', {
+        headers: { 'x-api-key': apiKey, 'Authorization': `Bearer ${userToken}` },
+      }).then((r) => r.json());
+
+      if (cancelled) return;
+      const ids: number[] = wl.items.map((i: any) => i.uirId);
+
+      // 2. Snapshot
+      const snap = await fetch('https://api.vedpragya.com/v1/instruments/ltp', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ instruments: ids }),
+      }).then((r) => r.json());
+
+      if (cancelled) return;
+
+      // 3. Render
+      setRows(
+        wl.items.map((it: any) => ({
+          uirId: it.uirId,
+          symbol: it.symbol ?? `#${it.uirId}`,
+          ...(snap[it.uirId] ?? {}),
+        })),
+      );
+
+      // 4. Open socket
+      const socket = io('https://stream.vedpragya.com', {
+        extraHeaders: { 'x-api-key': apiKey },
+        transports: ['websocket'],
+      });
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
+        socket.emit('subscribe', { channel: 'market_data', instruments: ids });
+      });
+      socket.on('market_data', (tick: any) => {
+        setRows((prev) =>
+          prev.map((r) => (r.uirId === tick.uirId ? { ...r, ...tick } : r)),
+        );
+      });
+    }
+
+    open();
+    return () => {
+      cancelled = true;
+      socketRef.current?.disconnect();
+    };
+  }, [apiKey, userToken]);
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th><th>Last</th><th>Change</th><th>%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.uirId}>
+            <td>{r.symbol}</td>
+            <td>{r.lastPrice?.toFixed(2) ?? '—'}</td>
+            <td className={(r.change ?? 0) >= 0 ? 'pos' : 'neg'}>
+              {(r.change ?? 0) >= 0 ? '+' : ''}{r.change?.toFixed(2) ?? '—'}
+            </td>
+            <td className={(r.changePct ?? 0) >= 0 ? 'pos' : 'neg'}>
+              {(r.changePct ?? 0) >= 0 ? '+' : ''}{r.changePct?.toFixed(2) ?? '—'}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+```
+
+## What this component does right
+
+- **First paint is from the snapshot.** The page is never empty.
+- **Tick updates are surgical.** Only the changed row re-renders.
+- **Reconnect is automatic.** Socket.IO handles it; the
+  `connect` handler re-emits the subscription.
+- **No flicker.** The first row data is from the snapshot, the rest are
+  ticks; they share the same row shape.
+
+## When to add a server-rendered step
+
+If the page is server-rendered (Next.js `getServerSideProps`, etc.),
+do steps 1 and 2 on the server and pass the rendered HTML to the
+browser. The client only needs to open the socket and apply ticks. This
+gives you sub-100 ms first paint on the watchlist page.
+
+## When to skip the snapshot
+
+If you're rendering a small, fast-moving watchlist (say, 5 instruments)
+on a page that's already live, you can skip the snapshot and rely on
+the WebSocket's first tick. The first `market_data` event arrives
+within a few hundred milliseconds of `subscribe`. The cost: the page
+renders an empty row briefly.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Symbols & formats →](/symbols)
+</Callout>

@@ -1,0 +1,142 @@
+---
+title: Common errors
+description: The error codes you'll see most often, and what to do about them.
+---
+
+import { Callout } from 'nextra/components';
+
+# Common errors
+
+## `bad_api_key`
+
+The `x-api-key` header is missing, malformed, or revoked.
+
+**REST:** 401.
+**WebSocket:** `connect_error` with `message` containing `bad_api_key`.
+
+**Action:** Re-issue the key in the admin panel. Check for a trailing
+space in the env var. If the key was rotated, use the new one.
+
+## `cors_blocked`
+
+The browser's `Origin` is not on the customer's allowlist.
+
+**WebSocket:** `connect_error` with `message` containing `cors_blocked`.
+
+**Action:** Add the origin (e.g. `https://staging.myapp.com`) to the
+allowlist in the admin panel. The change takes effect within 60 seconds.
+
+## `env_mismatch`
+
+You're using a staging key against production, or vice versa.
+
+**Action:** Check the env wiring. Streams key names are
+environment-scoped — `STREAMS_KEY_STG` won't work in production.
+
+## `rate_limited`
+
+You exceeded the rate limit on this endpoint / WebSocket message type.
+
+```json
+{
+  "error": "rate_limited",
+  "message": "60 requests per 60 s exceeded.",
+  "details": { "retryAfter": 1 }
+}
+```
+
+**Action:** Honor `details.retryAfter`. Add exponential backoff with
+jitter on the client. If you are regularly hitting the rate limit, your
+code is probably calling the snapshot endpoint on every tick — switch
+to the WebSocket.
+
+## `subscribe_too_many`
+
+You sent more than 1,000 instruments in a single `subscribe` frame.
+
+**Action:** Batch into multiple frames. Each one is independent; you
+can fire them in parallel and the gateway will dedupe.
+
+## `subscribe_rate_limited`
+
+You sent more than 60 `subscribe` frames in 60 seconds.
+
+**Action:** Maintain a local "intended subscription" set and only emit
+when it changes.
+
+## `unresolved_instrument`
+
+You subscribed to a UIR id the platform does not know.
+
+**Action:** The id is invalid, expired, or from a different catalogue.
+Don't retry. Treat it as a hard failure in the row that subscribed
+with it.
+
+## `forbidden_instrument`
+
+You subscribed to a UIR id your key does not have access to.
+
+**Action:** Email support. The platform has flagged the instrument as
+out of scope for your tier.
+
+## `idle_timeout`
+
+The socket had no `subscribe` or `unsubscribe` frames for 5 minutes and
+was closed.
+
+**Action:** Send a `subscribe` (even one that re-emits the existing
+set) to keep the socket warm. Most apps don't hit this — it's there to
+detect dead tabs.
+
+## `internal_error`
+
+Server-side bug or downstream failure.
+
+```json
+{
+  "error": "internal_error",
+  "traceId": "01HXY..."
+}
+```
+
+**Action:** Retry with backoff. If persistent, file a ticket with the
+`traceId`. We use the trace id to find the exact log line in our
+incident dashboard.
+
+## A small error handler
+
+```js
+async function callStreams(url, opts) {
+  const r = await fetch(url, opts);
+  if (r.ok) return r.json();
+
+  const body = await r.json();
+  switch (body.error) {
+    case 'rate_limited': {
+      const wait = body.details?.retryAfter ?? 1;
+      await new Promise((res) => setTimeout(res, wait * 1000));
+      return callStreams(url, opts);
+    }
+    case 'internal_error':
+      // Log traceId, retry once with backoff
+      console.warn('streams 5xx', body.traceId);
+      await new Promise((res) => setTimeout(res, 500 + Math.random() * 500));
+      return callStreams(url, opts);
+    default:
+      throw Object.assign(new Error(body.message), { code: body.error, body });
+  }
+}
+```
+
+## What you should *not* do
+
+- Don't retry 4xx errors. They will not get better with retry.
+- Don't retry 429s without honoring `retryAfter`. You'll just queue
+  more requests behind the same wall.
+- Don't swallow `traceId` from 5xx errors. We need it.
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Tricky data cases →](/errors/data-cases)
+</Callout>

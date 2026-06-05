@@ -1,0 +1,51 @@
+---
+title: Symbols & formats
+description: The user-facing rules for what to type in the search bar, and the identifier spaces behind it.
+---
+
+import { Callout } from 'nextra/components';
+
+# Symbols & formats
+
+This page is about the *string* shapes users type into the search bar.
+For the *identifier* your code stores, see
+[Identifier spaces →](/symbols/identifier-spaces).
+
+## The general rule
+
+The search API accepts free-form input. We tokenize, then rank. The
+tokenizer understands:
+
+- Bare tickers (`RELIANCE`, `HDFCBANK`).
+- Canonical prefixes (`NSE:RELIANCE`, `BSE:HDFCBANK`).
+- Index names (`NIFTY 50`, `SENSEX`, `BANKNIFTY`).
+- Derivative shorthand (`NIFTY 23500 CE`, `BANKNIFTY FUT 28 NOV 24`,
+  `GOLD FUT 05 JUN 26`).
+- ISINs (`INE002A01018`).
+
+You don't have to be exact. We do prefix and fuzzy matching, but the
+*more specific* your input, the higher the result ranks.
+
+## What not to send
+
+- Don't send the provider's instrument token. If you have one from a
+  legacy system, throw it away — it's the wrong identifier space.
+- Don't send partial canonicals with the wrong exchange (e.g.
+  `MCX:RELIANCE`). The catalogue will return no results.
+- Don't send URLs or HTML. The search endpoint expects text.
+
+## Sections
+
+<Cards>
+
+- [Equities & indices →](/symbols/equity)
+- [Derivative shorthand →](/symbols/derivative)
+- [Identifier spaces →](/symbols/identifier-spaces)
+
+</Cards>
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [Equities & indices →](/symbols/equity)
+</Callout>

@@ -1,0 +1,168 @@
+---
+title: LTP snapshot
+description: POST /v1/instruments/ltp — the most-called endpoint. Snapshot 500 instruments in one round trip.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+import { TryIt } from '../../components/TryIt';
+
+# LTP snapshot
+
+`POST /v1/instruments/ltp` is the workhorse of every dashboard. It is the
+"give me the latest number for each of these" endpoint.
+
+## Request
+
+```http
+POST /v1/instruments/ltp
+Content-Type: application/json
+x-api-key: vk_live_...
+
+{
+  "instruments": [114996, 26026, 256265]
+}
+```
+
+| Field         | Type    | Required | Notes                                                                 |
+| ------------- | ------- | -------- | --------------------------------------------------------------------- |
+| `instruments` | int[]   | Yes      | 1 to 500 UIR ids.                                                     |
+| `fields`      | string[]| No       | Subset of `["lastPrice","ohlc","change","volume"]`. Default: all.     |
+| `provider`    | string  | No       | `auto` (default), `primary`, `mirror`. Admin snapshots only.          |
+
+## Response
+
+```json
+{
+  "114996": {
+    "lastPrice": 2347.10,
+    "open": 2331.50,
+    "high": 2350.00,
+    "low": 2325.40,
+    "close": 2341.10,
+    "change": 6.00,
+    "changePct": 0.26,
+    "volume": 12403201,
+    "avgPrice": 2338.42,
+    "oi": null,
+    "ts": "2026-06-05T03:45:11.000Z"
+  },
+  "26026": {
+    "lastPrice": 23416.55,
+    "open": 23480.10,
+    "high": 23510.40,
+    "low": 23350.00,
+    "close": 23466.65,
+    "change": -50.10,
+    "changePct": -0.21,
+    "volume": 0,
+    "avgPrice": null,
+    "oi": null,
+    "ts": "2026-06-05T03:45:11.000Z"
+  }
+}
+```
+
+## Field reference
+
+| Field        | Type    | Description                                                  |
+| ------------ | ------- | ------------------------------------------------------------ |
+| `lastPrice`  | number  | Most recent trade price.                                      |
+| `open`       | number  | Today's session open.                                         |
+| `high`       | number  | Today's session high.                                         |
+| `low`        | number  | Today's session low.                                          |
+| `close`      | number  | Previous session close.                                       |
+| `change`     | number  | `lastPrice - close` (rounded).                                |
+| `changePct`  | number  | `(change / close) * 100`.                                      |
+| `volume`     | integer | Cumulative traded volume (contracts for derivatives, shares for cash). |
+| `avgPrice`   | number? | Volume-weighted average. `null` if not available.              |
+| `oi`         | integer?| Open interest (derivatives only). `null` for cash.            |
+| `ts`         | string  | ISO-8601 timestamp of the snapshot (UTC).                     |
+
+## Codes
+
+<Tabs items={['200', '400', '404', '429', '5xx']}>
+  <Tab>
+    ```json
+    { "114996": { "lastPrice": 2347.10, ... } }
+    ```
+    Note: the response is keyed by UIR id, not an array. There is one entry
+    per requested id, including those with no quote (see below).
+  </Tab>
+  <Tab>
+    ```json
+    { "error": "instruments_too_large", "message": "Maximum 500 ids per request." }
+    ```
+    Truncate the request to 500 ids and call again.
+  </Tab>
+  <Tab>
+    ```json
+    { "26026": null }
+    ```
+    The id is unknown to us. The entry exists but is `null` — the row was
+    not silently dropped. If you see a lot of `null` rows from a stable id
+    set, see [Errors & edge cases →](/errors).
+  </Tab>
+  <Tab>
+    ```json
+    { "error": "rate_limited", "retryAfter": 1 }
+    ```
+    Honor `retryAfter`. We strongly recommend an exponential backoff with
+    jitter.
+  </Tab>
+  <Tab>
+    ```json
+    { "error": "internal_error", "traceId": "01HXY..." }
+    ```
+    Retry with backoff. Capture the `traceId` and report it if persistent.
+  </Tab>
+</Tabs>
+
+## What "null" means
+
+If a key in the response is `null`, it means **the platform has no current
+quote for that UIR id**. It does *not* mean the instrument is invalid (a
+truly invalid id gets a 400). The most common reasons:
+
+- The market is closed and the snapshot mirror hasn't caught up.
+- The id is for a derivative contract that has just expired.
+- The id is for a non-trading record (e.g. an old corporate action
+  instrument that is still in the catalogue but no longer trades).
+
+## Performance
+
+| Metric      | Target       |
+| ----------- | ------------ |
+| Latency p50 | 12 ms        |
+| Latency p99 | 80 ms        |
+| Throughput  | 12,000 RPS   |
+
+## When to use it
+
+- **First paint** of a dashboard or watchlist.
+- **Server-rendered pages** where the browser hasn't opened a socket yet.
+- **Background polls** for the "last seen price" indicator (e.g. the
+  number in a tab title).
+- **Not for live updates** — use the WebSocket for that.
+
+## Try it
+
+<TryIt
+  method="POST"
+  url="https://api.vedpragya.com/v1/instruments/ltp"
+  apiKeyHint="vk_live_..."
+  params={[
+    {
+      name: 'instruments',
+      label: 'UIR ids',
+      default: '114996, 26026',
+      placeholder: '114996, 26026, 256265',
+    },
+  ]}
+  description="A bulk LTP snapshot. The instruments field accepts up to 500 UIR ids as a comma-separated list."
+/>
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  → [OHLCV & history →](/instruments/ohlcv)
+</Callout>

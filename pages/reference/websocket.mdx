@@ -1,0 +1,181 @@
+---
+title: WebSocket protocol
+description: Field-level reference for the Socket.IO gateway.
+---
+
+import { Callout, Tabs, Tab } from 'nextra/components';
+
+# WebSocket protocol
+
+URL: `https://stream.vedpragya.com` (production) or
+`https://stg.stream.vedpragya.com` (staging).
+
+Required header: `x-api-key`.
+
+The gateway is a Socket.IO v4 server. We **strongly recommend** using
+the Socket.IO client; the raw WebSocket protocol is documented at the
+bottom of this page for advanced integrations.
+
+## Connection
+
+```js
+import { io } from 'socket.io-client';
+
+const socket = io('https://stream.vedpragya.com', {
+  extraHeaders: { 'x-api-key': STREAMS_KEY },
+  transports: ['websocket'],
+  reconnection: true,
+  reconnectionDelay: 500,
+  reconnectionDelayMax: 10_000,
+  timeout: 10_000,
+});
+```
+
+## Events
+
+### client → server: `subscribe`
+
+```json
+{
+  "channel": "market_data",
+  "instruments": [114996, 26026],
+  "mode": "quote"
+}
+```
+
+| Field         | Type    | Required | Notes                                                       |
+| ------------- | ------- | -------- | ----------------------------------------------------------- |
+| `channel`     | string  | Yes      | Always `"market_data"`.                                     |
+| `instruments` | int[]   | Yes      | 1 to 1,000 UIR ids.                                         |
+| `mode`        | string  | No       | `ltp`, `quote` (default), `full`, `snapshot`.                |
+
+### client → server: `unsubscribe`
+
+```json
+{ "channel": "market_data", "instruments": [114996] }
+```
+
+### server → client: `subscription_state`
+
+Emitted once on connect.
+
+```json
+{ "channel": "market_data", "instruments": [114996, 26026], "mode": "quote" }
+```
+
+### server → client: `subscription_confirmed`
+
+Emitted in response to a `subscribe` or `unsubscribe` frame.
+
+```json
+{
+  "channel": "market_data",
+  "mode": "quote",
+  "confirmed":   [114996, 26026],
+  "unresolved":  [],
+  "forbidden":   []
+}
+```
+
+### server → client: `market_data`
+
+A tick.
+
+```json
+{
+  "uirId": 114996,
+  "lastPrice": 2347.10,
+  "open": 2331.50,
+  "high": 2350.00,
+  "low": 2325.40,
+  "close": 2341.10,
+  "change": 6.00,
+  "changePct": 0.26,
+  "volume": 12403201,
+  "oi": null,
+  "seq": 1840201,
+  "ts": "2026-06-05T03:45:11.142Z"
+}
+```
+
+See [Event reference → `market_data`](/live-data/events#market_data) for
+the full field reference.
+
+### server → client: `error`
+
+```json
+{
+  "code": "subscribe_too_many",
+  "message": "Maximum 1000 instruments per subscribe frame.",
+  "details": { "received": 1500, "limit": 1000 }
+}
+```
+
+### Socket.IO built-ins
+
+| Event           | Notes                                                            |
+| --------------- | ---------------------------------------------------------------- |
+| `connect`       | Fires on (re)connect.                                             |
+| `disconnect`    | Fires on disconnect.                                             |
+| `connect_error` | Fires on auth failure. `err.message` carries the stable code.    |
+
+## `connect_error` codes
+
+| `err.message`              | Meaning                                          |
+| -------------------------- | ------------------------------------------------ |
+| `no_api_key`               | `x-api-key` missing.                             |
+| `bad_api_key`              | Key invalid.                                     |
+| `env_mismatch`             | Staging key in production, or vice versa.        |
+| `cors_blocked`             | Origin not on the allowlist.                     |
+| `server_error`             | Gateway boot failure or downstream outage.       |
+
+## Modes
+
+| Mode        | Tick fields                                                              |
+| ----------- | ------------------------------------------------------------------------ |
+| `ltp`       | `uirId`, `lastPrice`, `seq`, `ts`.                                       |
+| `quote`     | All of `ltp` + `open`, `high`, `low`, `close`, `change`, `changePct`, `volume`. |
+| `full`      | All of `quote` + `depth`, `iv`, `oi`, `tbq`, `tsq`.                     |
+| `snapshot`  | Same as `quote`, but emitted once per id and then never again.          |
+
+## Limits
+
+| Limit                              | Value                |
+| ---------------------------------- | -------------------- |
+| Instruments per `subscribe`        | 1,000                |
+| Total instruments per socket       | 1,000                |
+| `subscribe` rate (per key)         | 60 / 60 s            |
+| `subscribe` burst                  | 4 / 1 s              |
+| Tick replay window on reconnect    | 60 s                 |
+| Idle close                         | 5 min                |
+| Ping/pong                          | 25 s                 |
+
+## Raw WebSocket frame layout (advanced)
+
+If you cannot use the Socket.IO client, the protocol on the wire is
+Socket.IO v4 Engine.IO framing. The handshake is:
+
+1. `GET /socket.io/?EIO=4&transport=websocket&x-api-key=…` (the API key
+   goes in the *query string*, not a header, because the browser cannot
+   set custom headers on a raw WebSocket).
+2. Server upgrades and sends Engine.IO open (`0{"sid":"…",…}`).
+3. Client sends Socket.IO connect (`40`).
+4. Server sends Socket.IO connect ack (`40{"sid":"…"}`).
+5. Application frames are `42["event", payload]`.
+
+The rest of the protocol is identical to the Socket.IO client: send
+`42["subscribe",{...}]`, receive `42["market_data",{...}]`.
+
+<Callout type="warning" emoji="⚠️">
+  If you are writing a raw WebSocket client, you are responsible for
+  implementing Engine.IO, Socket.IO packet parsing, ping/pong, and
+  reconnect. There is no API stability guarantee on the wire format
+  beyond what Socket.IO itself provides. Most teams should use the
+  client library.
+</Callout>
+
+## Next
+
+<Callout type="default" emoji="➡️">
+  ← Back to the [HTTP reference →](/reference/http)
+</Callout>

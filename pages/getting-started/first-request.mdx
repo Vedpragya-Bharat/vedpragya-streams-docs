@@ -1,0 +1,139 @@
+---
+title: Your first request
+description: A 60-second copy-paste walkthrough — from a fresh terminal to a live tick on screen.
+---
+
+import { Callout, Tabs, Tab, Steps } from 'nextra/components';
+
+# Your first request
+
+This page is deliberately short. The goal is **one successful live tick** in
+under 60 seconds.
+
+## Prereqs
+
+- An API key (see [Authentication](/getting-started/authentication)).
+- A terminal with `curl`.
+- `node` 18+ if you want the live tick in JS.
+
+## Step 1 — export the key
+
+```bash
+export STREAMS_KEY=vk_live_xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+## Step 2 — search
+
+<Tabs items={['cURL', 'Node']}>
+  <Tab>
+    ```bash
+    curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
+      -H "x-api-key: $STREAMS_KEY"
+    ```
+  </Tab>
+  <Tab>
+    ```js
+    const r = await fetch(
+      'https://api.vedpragya.com/v1/search?q=RELIANCE',
+      { headers: { 'x-api-key': process.env.STREAMS_KEY } }
+    );
+    const json = await r.json();
+    console.log(json.results[0]);
+    ```
+  </Tab>
+</Tabs>
+
+The first hit's `id` is the **UIR id** — that's the only key you need to
+remember for everything else.
+
+## Step 3 — snapshot
+
+```bash
+curl -X POST "https://api.vedpragya.com/v1/instruments/ltp" \
+  -H "x-api-key: $STREAMS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"instruments": [114996]}'
+```
+
+You should see a numeric `lastPrice` for the instrument.
+
+## Step 4 — live
+
+<Tabs items={['Node', 'Python']}>
+  <Tab>
+    ```js
+    import { io } from 'socket.io-client';
+
+    const socket = io('https://stream.vedpragya.com', {
+      extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
+      transports: ['websocket'],
+    });
+
+    socket.on('connect', () => {
+      console.log('connected', socket.id);
+      socket.emit('subscribe', {
+        channel: 'market_data',
+        instruments: [114996],
+      });
+    });
+
+    socket.on('market_data', (tick) => {
+      console.log(tick.uirId, tick.lastPrice, tick.ts);
+    });
+
+    socket.on('subscription_confirmed', (ack) => {
+      console.log('subscribed', ack);
+    });
+    ```
+  </Tab>
+  <Tab>
+    ```python
+    import socketio, os, time
+
+    sio = socketio.Client()
+
+    @sio.event
+    def connect():
+        print('connected')
+        sio.emit('subscribe', {
+            'channel': 'market_data',
+            'instruments': [114996],
+        })
+
+    @sio.on('market_data')
+    def on_tick(data):
+        print(data['uirId'], data['lastPrice'], data['ts'])
+
+    sio.connect(
+        'https://stream.vedpragya.com',
+        headers={'x-api-key': os.environ['STREAMS_KEY']},
+        transports=['websocket'],
+    )
+    sio.wait()
+    ```
+  </Tab>
+</Tabs>
+
+You should see ticks arriving roughly every second during market hours.
+
+<Callout type="warning" emoji="🕒">
+  Most venues are closed outside trading hours. The connection still works,
+  but ticks will be sparse (last-trade-replay, indicative prices, or
+  pre-market quotes).
+</Callout>
+
+## Step 5 — disconnect cleanly
+
+```js
+socket.disconnect();
+```
+
+That's it. You now have a key, a search, a snapshot, and a live stream. The
+rest of these docs explain the corners, the error cases, and the patterns
+that hold up under load.
+
+## Next step
+
+<Callout type="default" emoji="➡️">
+  → [Environments & base URLs](/getting-started/environments)
+</Callout>

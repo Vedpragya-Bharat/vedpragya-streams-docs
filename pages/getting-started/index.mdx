@@ -1,0 +1,88 @@
+---
+title: Getting started
+description: Set up an API key, hit your first endpoint, and stream your first live tick in under five minutes.
+---
+
+import { Callout, Tabs, Tab, Steps, Cards } from 'nextra/components';
+
+# Getting started
+
+This guide gets you from zero to your first live tick in under five minutes.
+You will need **one API key** and **a terminal**. That's it.
+
+<Callout type="info" emoji="🛂">
+  API keys are issued per customer. If you don't have one yet, request access
+  from the [admin panel](/) — it takes about 30 seconds to provision.
+</Callout>
+
+## What you'll learn
+
+<Steps>
+
+### Get a key
+
+Sign in, click **Create key**, copy the value. Your key is a long-lived bearer
+that you keep on the client. You can rotate it at any time.
+
+### Hit search
+
+```bash
+curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
+  -H "x-api-key: $STREAMS_KEY"
+```
+
+### Subscribe to live ticks
+
+```js
+import { io } from 'socket.io-client';
+const socket = io('https://stream.vedpragya.com', {
+  extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
+});
+socket.on('market_data', (tick) => console.log(tick));
+```
+
+### You're done
+
+You now have search, snapshot prices, and a live feed. Add watchlist CRUD if
+you want persistence; the rest is just UI.
+
+</Steps>
+
+## Pick your path
+
+<Cards>
+  <Cards.Card title="I'm building a typeahead" href="/search">
+    Start with <code>/api/search</code>. Latency-optimized and typo-tolerant.
+  </Cards.Card>
+  <Cards.Card title="I'm building a streaming UI" href="/live-data">
+    Skip search, subscribe to a hard-coded universe, hydrate the first paint
+    from <code>/instruments/ltp</code>.
+  </Cards.Card>
+  <Cards.Card title="I want a watchlist" href="/watchlist">
+    Persist symbols per user; serve a snapshot on load, then live-update.
+  </Cards.Card>
+  <Cards.Card title="I just want the API reference" href="/reference/http">
+    Tab-complete my way through every endpoint. No narrative.
+  </Cards.Card>
+</Cards>
+
+## What you don't have to worry about
+
+A handful of details are intentionally hidden from your code:
+
+- **The underlying provider.** Streams sits between your app and our market
+  data vendor. We handle authentication, session refresh, and failover.
+- **Identifier translation.** Search returns UIR ids. The live feed accepts
+  UIR ids. You never need to know the provider's instrument-token space.
+- **Stale-tick bookkeeping.** Each tick carries a monotonic sequence
+  number; the platform drops late and duplicate ticks for you.
+- **Reconnect storms.** Our WebSocket gateway implements exponential
+  backoff and message replay for at-most-once delivery of recent ticks.
+
+## Next step
+
+<Callout type="default" emoji="➡️">
+  Read [Authentication](/getting-started/authentication) to learn the three
+  header rules and the rate-limit model, then jump to
+  [Your first request](/getting-started/first-request) for a copy-paste run.
+</Callout>

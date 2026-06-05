@@ -1,0 +1,7 @@
+{
+  "index": "Overview",
+  "connect": "Connect & handshake",
+  "subscribe": "Subscribe to ticks",
+  "events": "Event reference",
+  "reconnection": "Reconnection & resilience"
+}
