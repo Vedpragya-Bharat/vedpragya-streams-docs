@@ -82,12 +82,15 @@ function buildLinkTags(cssFiles) {
 
 function removeOldLinks(html) {
   // Strip any <link rel="stylesheet" href="/<basePath>/_next/static/css/...">
-  // tags we previously injected. We are surgical: only our href prefix.
+  // tag, regardless of which other attributes it carries. Next 14 / Nextra
+  // 3 alpha sometimes emit the global stylesheet link with a trailing
+  // `data-n-p=""` attribute, and we want to scrub those too so that we
+  // can re-emit the full canonical block in one place without duplicates.
   const re = new RegExp(
-    `<link\\s+rel="stylesheet"\\s+href="${basePath.replace(
+    `<link\\s+[^>]*rel="stylesheet"[^>]*href="${basePath.replace(
       '/',
       '\\/'
-    )}\/_next\/static\/css\/[^"]+"\\s*\\/?>`,
+    )}\/_next\/static\/css\/[^"]+"[^>]*>`,
     'g'
   );
   return html.replace(re, '');
