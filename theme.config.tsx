@@ -43,7 +43,7 @@ const config: DocsThemeConfig = {
   docsRepositoryBase:
     'https://github.com/Vedpragya-Bharat/vedpragya-streams-docs/blob/main',
   editLink: {
-    text: 'Edit this page on GitHub →',
+    content: 'Edit this page on GitHub →',
   },
   useNextSeoProps() {
     const { asPath } = useRouter();
