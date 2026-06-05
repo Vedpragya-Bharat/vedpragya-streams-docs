@@ -114,12 +114,8 @@ const config: DocsThemeConfig = {
       </div>
     ),
   },
-  codeHighlight: {
-    theme: {
-      light: 'github-light',
-      dark: 'github-dark',
-    },
-  },
+  // `codeHighlight` was removed in nextra 3 alpha; the default Shiki
+  // theme is used and can be customised via MDX frontmatter if needed.
 };
 
 export default config;
