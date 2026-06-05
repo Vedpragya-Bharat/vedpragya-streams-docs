@@ -99,7 +99,7 @@ const config: DocsThemeConfig = {
     storageKey: 'streams-theme',
   },
   footer: {
-    text: (
+    content: (
       <div
         style={{
           display: 'flex',
