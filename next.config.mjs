@@ -23,6 +23,13 @@ const nextConfig = {
   output: 'export',
   images: { unoptimized: true },
   trailingSlash: true,
+  // Subpath: the docs site is mounted at
+  // https://marketdata.vedpragya.com/docs/. basePath rewrites all
+  // internal links and `assetPrefix` rewrites every `_next/...` and
+  // static asset URL so the build is portable to any subpath without
+  // touching MDX.
+  basePath: '/docs',
+  assetPrefix: '/docs',
   // Caching tweaks so the production build is fast on rebuilds.
   experimental: {
     optimizePackageImports: ['nextra', 'nextra-theme-docs'],
