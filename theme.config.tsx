@@ -1,5 +1,4 @@
 import React from 'react';
-import { useRouter } from 'next/router';
 import type { DocsThemeConfig } from 'nextra-theme-docs';
 
 const config: DocsThemeConfig = {
@@ -45,15 +44,12 @@ const config: DocsThemeConfig = {
   editLink: {
     content: 'Edit this page on GitHub →',
   },
-  useNextSeoProps() {
-    const { asPath } = useRouter();
-    if (asPath !== '/') {
-      return { titleTemplate: '%s – Vedpragya Streams' };
-    }
-    return { titleTemplate: 'Vedpragya Streams – Market data, made for builders' };
-  },
+  // Per-page title suffix is set via the `<title>` element rendered
+  // from each page's frontmatter title + a global default in `head`.
+  // The dynamic `useNextSeoProps` API was removed in nextra 3 alpha.
   head: (
     <>
+      <title>Vedpragya Streams – Market data, made for builders</title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta
         name="description"
@@ -124,8 +120,6 @@ const config: DocsThemeConfig = {
       dark: 'github-dark',
     },
   },
-  // i18n comes later if needed; leave default for now.
-  i18n: [],
 };
 
 export default config;
