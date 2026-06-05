@@ -1,0 +1,24 @@
+import type { MetaRecord } from 'nextra';
+
+const meta: MetaRecord = {
+  index: {
+    title: 'Home',
+    type: 'page',
+    display: 'hidden',
+    theme: {
+      layout: 'full',
+      toc: false,
+      breadcrumb: false,
+    },
+  },
+  'getting-started': 'Getting Started',
+  search: 'Search',
+  instruments: 'Instruments',
+  'live-data': 'Live Data',
+  watchlist: 'Watchlist',
+  symbols: 'Symbols & Formats',
+  errors: 'Errors & Edge Cases',
+  reference: 'API Reference',
+};
+
+export default meta;
