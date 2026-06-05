@@ -3,7 +3,7 @@ title: Authentication
 description: How to send your API key, the three header rules, and the rate-limit model.
 ---
 
-import { Callout, Tabs, Tab } from 'nextra/components';
+import { Callout, Tabs } from 'nextra/components';
 
 # Authentication
 
@@ -13,13 +13,13 @@ no OAuth flows to wire, no tokens to refresh, and no SDK to install.
 ## Sending the key
 
 <Tabs items={['REST', 'WebSocket', 'Server-side']}>
-  <Tab>
+  <Tabs.Tab>
     ```bash
     curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
       -H "x-api-key: $STREAMS_KEY"
     ```
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```js
     import { io } from 'socket.io-client';
 
@@ -28,8 +28,8 @@ no OAuth flows to wire, no tokens to refresh, and no SDK to install.
       transports: ['websocket'],          // skip the long-poll upgrade
     });
     ```
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```ts
     // You should also pin the host on the server.
     const headers = { 'x-api-key': process.env.STREAMS_KEY! };
@@ -37,7 +37,7 @@ no OAuth flows to wire, no tokens to refresh, and no SDK to install.
       headers,
     });
     ```
-  </Tab>
+  </Tabs.Tab>
 </Tabs>
 
 ## Header rules

@@ -3,7 +3,7 @@ title: Live data
 description: 'The WebSocket gateway: connect, subscribe, receive ticks. The most important page in these docs.'
 ---
 
-import { Callout, Tabs, Tab, Cards } from 'nextra/components';
+import { Callout, Tabs, Cards } from 'nextra/components';
 
 # Live data
 
@@ -26,7 +26,7 @@ acknowledgements. Everything else is metadata.
 ## The five-minute version
 
 <Tabs items={['Node', 'Browser', 'Python']}>
-  <Tab>
+  <Tabs.Tab>
     ```js
     import { io } from 'socket.io-client';
 
@@ -50,8 +50,8 @@ acknowledgements. Everything else is metadata.
       console.log(tick.uirId, tick.lastPrice);
     });
     ```
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```html
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
@@ -75,8 +75,8 @@ acknowledgements. Everything else is metadata.
       });
     </script>
     ```
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```python
     import os, socketio
 
@@ -100,7 +100,7 @@ acknowledgements. Everything else is metadata.
     )
     sio.wait()
     ```
-  </Tab>
+  </Tabs.Tab>
 </Tabs>
 
 ## What the platform hides

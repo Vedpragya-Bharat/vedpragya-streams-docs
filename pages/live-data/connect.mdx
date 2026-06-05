@@ -3,7 +3,7 @@ title: Connect & handshake
 description: URL, transport, headers, the connect event, and the initial subscription state.
 ---
 
-import { Callout, Tabs, Tab } from 'nextra/components';
+import { Callout, Tabs } from 'nextra/components';
 
 # Connect & handshake
 
@@ -19,7 +19,7 @@ recommend `transports: ['websocket']` to skip the long-poll upgrade).
 ## Transport
 
 <Tabs items={['Socket.IO client (recommended)', 'Plain WebSocket (advanced)']}>
-  <Tab>
+  <Tabs.Tab>
     ```js
     import { io } from 'socket.io-client';
 
@@ -32,12 +32,12 @@ recommend `transports: ['websocket']` to skip the long-poll upgrade).
       timeout: 10_000,
     });
     ```
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     The platform also accepts raw WebSocket clients speaking the
     Socket.IO protocol. See the [reference](/reference/websocket) for the
     exact frame layout. **Most teams should not need this.**
-  </Tab>
+  </Tabs.Tab>
 </Tabs>
 
 ## Headers

@@ -4,7 +4,7 @@ description: Real-time market data API. Search instruments, stream live ticks ov
 ---
 
 import { Cards } from 'nextra/components';
-import { Tabs, Tab } from 'nextra/components';
+import { Tabs } from 'nextra/components';
 import { Callout } from 'nextra/components';
 
 <div className="home-hero">
@@ -68,7 +68,7 @@ import { Callout } from 'nextra/components';
 ## A 30-second tour
 
 <Tabs items={['Search', 'Snapshot LTP', 'Live stream']}>
-  <Tab>
+  <Tabs.Tab>
     ```bash
     curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
       -H "x-api-key: $STREAMS_KEY"
@@ -87,8 +87,8 @@ import { Callout } from 'nextra/components';
     }
     ```
     [Full reference →](/search)
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```bash
     curl -X POST "https://api.vedpragya.com/v1/instruments/ltp" \
       -H "x-api-key: $STREAMS_KEY" \
@@ -102,8 +102,8 @@ import { Callout } from 'nextra/components';
     }
     ```
     [Snapshot endpoint →](/instruments/ltp-snapshot)
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```js
     import { io } from 'socket.io-client';
 
@@ -123,7 +123,7 @@ import { Callout } from 'nextra/components';
     });
     ```
     [Live data reference →](/live-data)
-  </Tab>
+  </Tabs.Tab>
 </Tabs>
 
 <Callout type="info" emoji="🛰">

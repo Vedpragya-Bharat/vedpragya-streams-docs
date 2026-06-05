@@ -3,7 +3,7 @@ title: LTP snapshot
 description: POST /v1/instruments/ltp — the most-called endpoint. Snapshot 500 instruments in one round trip.
 ---
 
-import { Callout, Tabs, Tab } from 'nextra/components';
+import { Callout, Tabs } from 'nextra/components';
 import { TryIt } from '../../components/TryIt';
 
 # LTP snapshot
@@ -81,40 +81,40 @@ x-api-key: vk_live_...
 ## Codes
 
 <Tabs items={['200', '400', '404', '429', '5xx']}>
-  <Tab>
+  <Tabs.Tab>
     ```json
     { "114996": { "lastPrice": 2347.10, ... } }
     ```
     Note: the response is keyed by UIR id, not an array. There is one entry
     per requested id, including those with no quote (see below).
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```json
     { "error": "instruments_too_large", "message": "Maximum 500 ids per request." }
     ```
     Truncate the request to 500 ids and call again.
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```json
     { "26026": null }
     ```
     The id is unknown to us. The entry exists but is `null` — the row was
     not silently dropped. If you see a lot of `null` rows from a stable id
     set, see [Errors & edge cases →](/errors).
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```json
     { "error": "rate_limited", "retryAfter": 1 }
     ```
     Honor `retryAfter`. We strongly recommend an exponential backoff with
     jitter.
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```json
     { "error": "internal_error", "traceId": "01HXY..." }
     ```
     Retry with backoff. Capture the `traceId` and report it if persistent.
-  </Tab>
+  </Tabs.Tab>
 </Tabs>
 
 ## What "null" means

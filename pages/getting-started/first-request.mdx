@@ -3,7 +3,7 @@ title: Your first request
 description: A 60-second copy-paste walkthrough — from a fresh terminal to a live tick on screen.
 ---
 
-import { Callout, Tabs, Tab, Steps } from 'nextra/components';
+import { Callout, Tabs, Steps } from 'nextra/components';
 
 # Your first request
 
@@ -25,13 +25,13 @@ export STREAMS_KEY=vk_live_xxxxxxxxxxxxxxxxxxxxxxxx
 ## Step 2 — search
 
 <Tabs items={['cURL', 'Node']}>
-  <Tab>
+  <Tabs.Tab>
     ```bash
     curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
       -H "x-api-key: $STREAMS_KEY"
     ```
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```js
     const r = await fetch(
       'https://api.vedpragya.com/v1/search?q=RELIANCE',
@@ -40,7 +40,7 @@ export STREAMS_KEY=vk_live_xxxxxxxxxxxxxxxxxxxxxxxx
     const json = await r.json();
     console.log(json.results[0]);
     ```
-  </Tab>
+  </Tabs.Tab>
 </Tabs>
 
 The first hit's `id` is the **UIR id** — that's the only key you need to
@@ -60,7 +60,7 @@ You should see a numeric `lastPrice` for the instrument.
 ## Step 4 — live
 
 <Tabs items={['Node', 'Python']}>
-  <Tab>
+  <Tabs.Tab>
     ```js
     import { io } from 'socket.io-client';
 
@@ -85,8 +85,8 @@ You should see a numeric `lastPrice` for the instrument.
       console.log('subscribed', ack);
     });
     ```
-  </Tab>
-  <Tab>
+  </Tabs.Tab>
+  <Tabs.Tab>
     ```python
     import socketio, os, time
 
@@ -111,7 +111,7 @@ You should see a numeric `lastPrice` for the instrument.
     )
     sio.wait()
     ```
-  </Tab>
+  </Tabs.Tab>
 </Tabs>
 
 You should see ticks arriving roughly every second during market hours.
