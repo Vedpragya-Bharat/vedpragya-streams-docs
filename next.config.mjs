@@ -9,9 +9,9 @@ const withNextra = nextra({
   theme: 'nextra-theme-docs',
   themeConfig: './theme.config.tsx',
   defaultShowCopyCode: true,
-  search: {
-    placeholder: 'Search the docs…',
-  },
+  // The default Nextra search is fine; the schema rejects a
+  // `placeholder` key, so we leave it to the theme default.
+  search: true,
   staticImage: true,
 });
 
