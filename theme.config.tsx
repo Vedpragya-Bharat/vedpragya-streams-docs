@@ -83,8 +83,8 @@ const config: DocsThemeConfig = {
     defaultMenuCollapseLevel: 1,
     toggleButton: true,
   },
-  primaryHue: { light: 232, dark: 192 },
-  primarySaturation: { light: 80, dark: 80 },
+  // The default Nextra indigo colour is used; the legacy `primaryHue`
+  // and `primarySaturation` fields were removed in nextra 3 alpha.
   navigation: {
     prev: true,
     next: true,
