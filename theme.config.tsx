@@ -82,12 +82,8 @@ const config: DocsThemeConfig = {
     ),
   },
   sidebar: {
-    titleComponent: ({ title, type }) =>
-      type === 'separator' ? (
-        <span style={{ opacity: 0.6 }}>{title}</span>
-      ) : (
-        <>{title}</>
-      ),
+    // nextra 3 alpha dropped `titleComponent`; the default title
+    // renderer is used. We keep the rest of the sidebar behaviour.
     defaultMenuCollapseLevel: 1,
     toggleButton: true,
   },
