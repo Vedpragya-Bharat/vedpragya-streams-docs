@@ -94,14 +94,59 @@ docker compose up docs-build
 
 ## Deploying
 
-The `Dockerfile` builds the static site and serves it with nginx on
-port 80. Push the image to your registry of choice; the runtime image
-is ~25 MB compressed.
+The site is mounted on the production server at
+`https://marketdata.vedpragya.com/docs/`. The deployment is a plain
+static export served by the existing nginx on the same box as the
+trading-app and search-api; no separate container or Node process.
 
-Behind a CDN:
+### One-time, on the server
 
-- `/` and `/*` — short cache (1 min, with `stale-while-revalidate`).
-- `/_next/static/*` — long cache (1 year, immutable).
+```bash
+sudo mkdir -p /opt/vedpragya-streams-docs
+sudo chown -R ubuntu:ubuntu /opt/vedpragya-streams-docs
+git clone git@github.com:Vedpragya-Bharat/vedpragya-streams-docs.git \
+        /opt/vedpragya-streams-docs
+cd /opt/vedpragya-streams-docs
+npm ci
+```
+
+The vhost at `/etc/nginx/sites-enabled/marketdata` already has a
+`location /docs/` block that aliases to
+`/opt/vedpragya-streams-docs/out/`. See [`nginx.conf`](./nginx.conf) for
+the exact block to copy if you ever rebuild the vhost from scratch.
+
+### Every release
+
+```bash
+cd /opt/vedpragya-streams-docs
+git pull --ff-only
+npm ci
+npx next build         # writes out/
+sudo systemctl reload nginx
+```
+
+`next build` is fully static (`output: 'export'` with
+`basePath: '/docs'`), so the only artifact that needs to be served is
+`out/`. nginx serves it as plain files; no Node server runs for the
+docs.
+
+### Caching
+
+- `/docs/_next/static/*` — 1 year, immutable (content-hashed filenames).
+- `/docs/*` (HTML) — must revalidate.
+
+### Rollback
+
+`out/` is reproducible from a git commit. To roll back:
+
+```bash
+cd /opt/vedpragya-streams-docs
+git checkout <good-sha>
+npx next build
+sudo systemctl reload nginx
+```
+
+No migration, no DB.
 
 ## License
 
