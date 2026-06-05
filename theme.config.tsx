@@ -75,7 +75,7 @@ const config: DocsThemeConfig = {
   banner: {
     key: 'streams-1.0',
     dismissible: true,
-    text: (
+    content: (
       <a href="/getting-started">
         🎉 Streams 1.0 is live — see the getting-started guide →
       </a>
