@@ -1,6 +1,6 @@
-import type { MetaRecord } from 'nextra';
 
-const meta: MetaRecord = {
+
+const meta = {
   index: 'Overview',
   'add-remove': 'Add & remove',
   hydrate: 'Hydrating from REST to live',

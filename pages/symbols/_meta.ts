@@ -1,6 +1,6 @@
-import type { MetaRecord } from 'nextra';
 
-const meta: MetaRecord = {
+
+const meta = {
   index: 'Overview',
   equity: 'Equities & indices',
   derivative: 'Derivative shorthand',

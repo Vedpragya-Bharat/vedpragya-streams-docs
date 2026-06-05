@@ -1,6 +1,6 @@
-import type { MetaRecord } from 'nextra';
 
-const meta: MetaRecord = {
+
+const meta = {
   index: 'Reference overview',
   http: 'HTTP endpoints',
   websocket: 'WebSocket protocol',

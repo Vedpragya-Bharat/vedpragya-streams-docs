@@ -1,6 +1,6 @@
-import type { MetaRecord } from 'nextra';
 
-const meta: MetaRecord = {
+
+const meta = {
   index: 'Error model',
   common: 'Common errors',
   'data-cases': 'Tricky data cases',

@@ -1,6 +1,6 @@
-import type { MetaRecord } from 'nextra';
 
-const meta: MetaRecord = {
+
+const meta = {
   index: 'Overview',
   authentication: 'Authentication',
   'first-request': 'Your first request',
