@@ -70,7 +70,7 @@ import { Callout } from 'nextra/components';
 <Tabs items={['Search', 'Snapshot LTP', 'Live stream']}>
   <Tabs.Tab>
     ```bash
-    curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
+    curl "https://marketdata.vedpragya.com/api/search?q=RELIANCE" \
       -H "x-api-key: $STREAMS_KEY"
     ```
     ```json {4}
@@ -90,15 +90,15 @@ import { Callout } from 'nextra/components';
   </Tabs.Tab>
   <Tabs.Tab>
     ```bash
-    curl -X POST "https://api.vedpragya.com/v1/instruments/ltp" \
+    curl -X POST "https://marketdata.vedpragya.com/api/stock/vayu/ltp" \
       -H "x-api-key: $STREAMS_KEY" \
       -H "Content-Type: application/json" \
-      -d '{"instruments": [114996, 26026]}'
+      -d '{"instruments": [334562, 26026]}'
     ```
     ```json
     {
-      "114996": { "lastPrice": 2347.10, "change": 0.82 },
-      "26026":  { "lastPrice": 23416.55, "change": -0.21 }
+      "334562": { "last_price": 2347.10, "change": 0.82 },
+      "26026":  { "last_price": 23416.55, "change": -0.21 }
     }
     ```
     [Snapshot endpoint →](/instruments/ltp-snapshot)
@@ -107,19 +107,19 @@ import { Callout } from 'nextra/components';
     ```js
     import { io } from 'socket.io-client';
 
-    const socket = io('https://stream.vedpragya.com', {
+    const socket = io('https://marketdata.vedpragya.com', {
       extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
     });
 
     socket.on('connect', () => {
       socket.emit('subscribe', {
         channel: 'market_data',
-        instruments: [114996, 26026],
+        instruments: [334562, 26026],
       });
     });
 
     socket.on('market_data', (tick) => {
-      console.log(tick.uirId, tick.lastPrice);
+      console.log(tick.uirId, tick.last_price);
     });
     ```
     [Live data reference →](/live-data)

@@ -80,7 +80,7 @@ rebuilt at the same cadence; align them.
 async function toUir(token) {
   const canonical = await providerCanonicalOf(token);
   const r = await fetch(
-    `https://api.vedpragya.com/v1/instruments/resolve?canonical=${encodeURIComponent(canonical)}`,
+    `https://marketdata.vedpragya.com/api/instruments/resolve?canonical=${encodeURIComponent(canonical)}`,
     { headers: { 'x-api-key': STREAMS_KEY } },
   );
   return (await r.json()).id;

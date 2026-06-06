@@ -26,7 +26,7 @@ Emitted **once**, immediately after the transport handshake.
 ```json
 {
   "channel": "market_data",
-  "instruments": [114996, 26026],
+  "instruments": [334562, 26026],
   "mode": "quote"
 }
 ```
@@ -42,16 +42,16 @@ Emitted in response to a `subscribe` or `unsubscribe` frame.
 ```json
 {
   "channel": "market_data",
-  "mode": "quote",
-  "confirmed":   [114996, 26026],
-  "unresolved":  [],
-  "forbidden":   []
+  "instruments": [334562, 26026],
+  "included": [334562, 26026],
+  "unresolved": [],
+  "forbidden": []
 }
 ```
 
 | Field         | Meaning                                                       |
 | ------------- | ------------------------------------------------------------- |
-| `confirmed`   | The UIR ids that are now in your subscription set.            |
+| `included`   | The UIR ids that are now in your subscription set.            |
 | `unresolved`  | UIR ids the platform does not know.                           |
 | `forbidden`   | UIR ids the platform knows but your key cannot access.        |
 
@@ -67,37 +67,44 @@ A tick. Emitted at-most-once per `uirId` per change.
 
 ```json
 {
-  "uirId": 114996,
-  "lastPrice": 2347.10,
-  "open": 2331.50,
-  "high": 2350.00,
-  "low": 2325.40,
-  "close": 2341.10,
+  "uirId": 334562,
+  "instrumentToken": 334562,
+  "last_price": 2347.10,
+  "ohlc": {
+    "o": 2331.50,
+    "h": 2350.00,
+    "l": 2325.40,
+    "c": 2341.10
+  },
   "change": 6.00,
-  "changePct": 0.26,
+  "pchange": 0.26,
   "volume": 12403201,
+  "avg_price": 2338.42,
+  "bid": 2345.50,
+  "ask": 2348.70,
   "oi": null,
   "seq": 1840201,
-  "ts": "2026-06-05T03:45:11.142Z"
+  "ts": "2026-06-06T05:15:00.000Z"
 }
 ```
 
 ### Field reference
 
-| Field         | Type     | Notes                                                                       |
-| ------------- | -------- | --------------------------------------------------------------------------- |
-| `uirId`       | integer  | Universal Instrument Record id. Stable.                                     |
-| `lastPrice`   | number   | Most recent trade price.                                                    |
-| `open`        | number   | Today's session open.                                                       |
-| `high`        | number   | Today's session high.                                                       |
-| `low`         | number   | Today's session low.                                                        |
-| `close`       | number   | Previous session close.                                                     |
-| `change`      | number   | `lastPrice - close`.                                                        |
-| `changePct`   | number   | `(change / close) * 100`.                                                   |
-| `volume`      | integer  | Cumulative traded volume.                                                  |
-| `oi`          | integer? | Open interest (derivatives only).                                           |
-| `seq`         | integer  | Monotonic per `uirId`. Use to drop late ticks.                              |
-| `ts`          | string   | ISO-8601 timestamp of the trade (UTC).                                      |
+| Field            | Type     | Notes                                                                       |
+| ---------------- | -------- | --------------------------------------------------------------------------- |
+| `uirId`          | integer  | Universal Instrument Record id. Stable.                                     |
+| `instrumentToken`| integer  | Same as uirId. Kept for backward compatibility.                           |
+| `last_price`    | number   | Most recent trade price.                                                    |
+| `ohlc`          | object   | OHLC data with `o`, `h`, `l`, `c` keys.                                  |
+| `change`        | number   | Absolute change from previous close.                                      |
+| `pchange`       | number   | Percentage change.                                                     |
+| `volume`        | integer  | Cumulative traded volume.                                                  |
+| `avg_price`     | number?  | Volume-weighted average price.                                           |
+| `bid`           | number?  | Best bid price.                                                         |
+| `ask`           | number?  | Best ask price.                                                         |
+| `oi`            | integer? | Open interest (derivatives only).                                           |
+| `seq`           | integer  | Monotonic per `uirId`. Use to drop late ticks.                              |
+| `ts`            | string   | ISO-8601 timestamp of the trade (UTC).                                      |
 
 ### Modes
 

@@ -27,7 +27,7 @@ that you keep on the client. You can rotate it at any time.
 ### Hit search
 
 ```bash
-curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
+curl "https://marketdata.vedpragya.com/api/search?q=RELIANCE" \
   -H "x-api-key: $STREAMS_KEY"
 ```
 
@@ -35,7 +35,7 @@ curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
 
 ```js
 import { io } from 'socket.io-client';
-const socket = io('https://stream.vedpragya.com', {
+const socket = io('https://marketdata.vedpragya.com', {
   extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
 });
 socket.on('market_data', (tick) => console.log(tick));

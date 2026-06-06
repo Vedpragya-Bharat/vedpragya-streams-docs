@@ -1,6 +1,6 @@
 ---
 title: LTP snapshot
-description: POST /v1/instruments/ltp — the most-called endpoint. Snapshot 500 instruments in one round trip.
+description: POST /api/instruments/ltp — the most-called endpoint. Snapshot 500 instruments in one round trip.
 ---
 
 import { Callout, Tabs } from 'nextra/components';
@@ -8,55 +8,55 @@ import { TryIt } from '../../components/TryIt';
 
 # LTP snapshot
 
-`POST /v1/instruments/ltp` is the workhorse of every dashboard. It is the
+`POST /api/stock/vayu/ltp` is the workhorse of every dashboard. It is the
 "give me the latest number for each of these" endpoint.
 
 ## Request
 
 ```http
-POST /v1/instruments/ltp
+POST /api/stock/vayu/ltp
 Content-Type: application/json
 x-api-key: vk_live_...
 
 {
-  "instruments": [114996, 26026, 256265]
+  "instruments": [334562, 26026, 256265]
 }
 ```
 
 | Field         | Type    | Required | Notes                                                                 |
 | ------------- | ------- | -------- | --------------------------------------------------------------------- |
 | `instruments` | int[]   | Yes      | 1 to 500 UIR ids.                                                     |
-| `fields`      | string[]| No       | Subset of `["lastPrice","ohlc","change","volume"]`. Default: all.     |
-| `provider`    | string  | No       | `auto` (default), `primary`, `mirror`. Admin snapshots only.          |
+| `fields`      | string[]| No       | Subset of `["last_price","ohlc","change","volume"]`. Default: all.    |
+| `provider`    | string  | No       | `falcon`, `vayu`, `drift`, `atlas`. Defaults to `falcon`.              |
 
 ## Response
 
 ```json
 {
-  "114996": {
-    "lastPrice": 2347.10,
-    "open": 2331.50,
-    "high": 2350.00,
-    "low": 2325.40,
-    "close": 2341.10,
+  "334562": {
+    "last_price": 2347.10,
+    "ohlc": {
+      "o": 2331.50,
+      "h": 2350.00,
+      "l": 2325.40,
+      "c": 2341.10
+    },
     "change": 6.00,
-    "changePct": 0.26,
     "volume": 12403201,
     "avgPrice": 2338.42,
-    "oi": null,
     "ts": "2026-06-05T03:45:11.000Z"
   },
   "26026": {
-    "lastPrice": 23416.55,
-    "open": 23480.10,
-    "high": 23510.40,
-    "low": 23350.00,
-    "close": 23466.65,
+    "last_price": 23416.55,
+    "ohlc": {
+      "o": 23480.10,
+      "h": 23510.40,
+      "l": 23350.00,
+      "c": 23466.65
+    },
     "change": -50.10,
-    "changePct": -0.21,
     "volume": 0,
     "avgPrice": null,
-    "oi": null,
     "ts": "2026-06-05T03:45:11.000Z"
   }
 }
@@ -66,16 +66,11 @@ x-api-key: vk_live_...
 
 | Field        | Type    | Description                                                  |
 | ------------ | ------- | ------------------------------------------------------------ |
-| `lastPrice`  | number  | Most recent trade price.                                      |
-| `open`       | number  | Today's session open.                                         |
-| `high`       | number  | Today's session high.                                         |
-| `low`        | number  | Today's session low.                                          |
-| `close`      | number  | Previous session close.                                       |
-| `change`     | number  | `lastPrice - close` (rounded).                                |
-| `changePct`  | number  | `(change / close) * 100`.                                      |
+| `last_price` | number  | Most recent trade price.                                      |
+| `ohlc`       | object  | OHLC data with `o`, `h`, `l`, `c` properties.                  |
+| `change`     | number  | Absolute price change.                                        |
 | `volume`     | integer | Cumulative traded volume (contracts for derivatives, shares for cash). |
 | `avgPrice`   | number? | Volume-weighted average. `null` if not available.              |
-| `oi`         | integer?| Open interest (derivatives only). `null` for cash.            |
 | `ts`         | string  | ISO-8601 timestamp of the snapshot (UTC).                     |
 
 ## Codes
@@ -148,7 +143,7 @@ truly invalid id gets a 400). The most common reasons:
 
 <TryIt
   method="POST"
-  url="https://api.vedpragya.com/v1/instruments/ltp"
+  url="https://marketdata.vedpragya.com/api/stock/vayu/ltp"
   apiKeyHint="vk_live_..."
   params={[
     {

@@ -10,7 +10,7 @@ import { Callout, Tabs } from 'nextra/components';
 ## URL
 
 ```
-https://stream.vedpragya.com
+https://marketdata.vedpragya.com
 ```
 
 The gateway is a Socket.IO v4 endpoint. Connect over **WebSocket** (we
@@ -23,7 +23,7 @@ recommend `transports: ['websocket']` to skip the long-poll upgrade).
     ```js
     import { io } from 'socket.io-client';
 
-    const socket = io('https://stream.vedpragya.com', {
+    const socket = io('https://marketdata.vedpragya.com', {
       extraHeaders: { 'x-api-key': STREAMS_KEY },
       transports: ['websocket'],
       reconnection: true,

@@ -12,10 +12,10 @@ staging key will not work in production, and vice versa.
 
 ## The two environments
 
-| Environment | Base URL (REST)                 | WebSocket URL                  | Notes                              |
-| ----------- | ------------------------------- | ------------------------------ | ---------------------------------- |
-| Production  | `https://api.vedpragya.com/v1`  | `https://stream.vedpragya.com` | What your customers hit.           |
-| Staging     | `https://stg.api.vedpragya.com` | `https://stg.stream.vedpragya.com` | Synthetic traffic, replays, chaos. |
+| Environment | Base URL (REST)                        | WebSocket URL                         | Notes                              |
+| ------------ | -------------------------------------- | ------------------------------------- | ---------------------------------- |
+| Production  | `https://marketdata.vedpragya.com/api` | `https://marketdata.vedpragya.com`  | What your customers hit.           |
+| Staging     | `https://stg.marketdata.vedpragya.com` | `https://stg.marketdata.vedpragya.com` | For testing.                       |
 
 <Callout type="info" emoji="🧪">
   Staging replays real market scenarios on a 5-minute delay against recorded
@@ -30,17 +30,17 @@ const isProd = process.env.NODE_ENV === 'production';
 
 export const streams = {
   apiKey: isProd ? process.env.STREAMS_KEY_PROD : process.env.STREAMS_KEY_STG,
-  restUrl: isProd ? 'https://api.vedpragya.com/v1' : 'https://stg.api.vedpragya.com',
-  wsUrl:   isProd ? 'https://stream.vedpragya.com' : 'https://stg.stream.vedpragya.com',
+  restUrl: isProd ? 'https://marketdata.vedpragya.com/api' : 'https://stg.marketdata.vedpragya.com/api',
+  wsUrl:   isProd ? 'https://marketdata.vedpragya.com' : 'https://stg.marketdata.vedpragya.com',
 };
 ```
 
 ## URL shape
 
-REST routes are versioned:
+REST routes are prefixed with `/api`:
 
 ```
-https://api.vedpragya.com/v1/<resource>
+https://marketdata.vedpragya.com/api/<resource>
 ```
 
 The `v1` prefix is **permanent**. Breaking changes go to `v2`; old routes

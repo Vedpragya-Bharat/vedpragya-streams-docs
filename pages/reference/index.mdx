@@ -15,20 +15,20 @@ sections.
 
 | Method | Path                                   | Purpose                                          |
 | ------ | -------------------------------------- | ------------------------------------------------ |
-| GET    | `/v1/search`                           | Identifier-aware search.                         |
-| POST   | `/v1/instruments/ltp`                  | Bulk LTP snapshot (1 to 500 ids).                 |
-| GET    | `/v1/instruments/ohlcv`                | Intraday and EOD candles.                        |
-| GET    | `/v1/instruments/resolve`              | `EXCHANGE:SYMBOL` → UIR id.                       |
-| GET    | `/v1/watchlist`                        | List the current user's watchlist.               |
-| POST   | `/v1/watchlist`                        | Add one or more instruments.                     |
-| DELETE | `/v1/watchlist/:uirId`                 | Remove a single instrument.                      |
-| POST   | `/v1/watchlist/reorder`                | Persist a new display order.                     |
+| GET    | `/api/search`                           | Identifier-aware search.                         |
+| POST   | `/api/instruments/ltp`                  | Bulk LTP snapshot (1 to 500 ids).                 |
+| GET    | `/api/instruments/ohlcv`                | Intraday and EOD candles.                        |
+| GET    | `/api/instruments/resolve`              | `EXCHANGE:SYMBOL` → UIR id.                       |
+| GET    | `/api/watchlist`                        | List the current user's watchlist.               |
+| POST   | `/api/watchlist`                        | Add one or more instruments.                     |
+| DELETE | `/api/watchlist/:uirId`                 | Remove a single instrument.                      |
+| POST   | `/api/watchlist/reorder`                | Persist a new display order.                     |
 
 → [Full HTTP reference →](/reference/http)
 
 ## WebSocket
 
-The live gateway is a Socket.IO endpoint at `wss://stream.vedpragya.com`.
+The live gateway is a Socket.IO endpoint at `wss://marketdata.vedpragya.com`.
 The protocol is a small set of events on top of Socket.IO.
 
 | Direction | Event                   | Purpose                                          |

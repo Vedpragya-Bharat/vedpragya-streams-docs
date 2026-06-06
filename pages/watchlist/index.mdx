@@ -15,10 +15,10 @@ just remembers the symbols the user is interested in.
 
 | Method | Path                       | Purpose                                          |
 | ------ | -------------------------- | ------------------------------------------------ |
-| GET    | `/v1/watchlist`            | List the current user's watchlist.               |
-| POST   | `/v1/watchlist`            | Add one or more instruments.                     |
-| DELETE | `/v1/watchlist/:uirId`     | Remove a single instrument.                      |
-| POST   | `/v1/watchlist/reorder`    | Update the display order.                        |
+| GET    | `/api/watchlist`            | List the current user's watchlist.               |
+| POST   | `/api/watchlist`            | Add one or more instruments.                     |
+| DELETE | `/api/watchlist/:uirId`     | Remove a single instrument.                      |
+| POST   | `/api/watchlist/reorder`    | Update the display order.                        |
 
 ## Authentication
 
@@ -46,11 +46,11 @@ The watchlist is **read-through cached** for 30 seconds. After a
 
 ## The "hydrate then live" pattern
 
-The watchlist API pairs with `/v1/instruments/ltp` and the live WebSocket
+The watchlist API pairs with `/api/instruments/ltp` and the live WebSocket
 to form a clean three-step pattern:
 
-1. **GET** `/v1/watchlist` → `[114996, 26026, ...]` (a list of UIR ids).
-2. **POST** `/v1/instruments/ltp` with those ids → first paint.
+1. **GET** `/api/watchlist` → `[114996, 26026, ...]` (a list of UIR ids).
+2. **POST** `/api/instruments/ltp` with those ids → first paint.
 3. **Open WebSocket**, `subscribe` to those ids, receive `market_data`
    events for each change.
 

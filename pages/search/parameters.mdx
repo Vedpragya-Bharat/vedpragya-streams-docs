@@ -1,6 +1,6 @@
 ---
 title: Query parameters
-description: Every field you can pass to /v1/search and what it does.
+description: Every field you can pass to /api/search and what it does.
 ---
 
 import { Callout } from 'nextra/components';
@@ -9,7 +9,7 @@ import { TryIt } from '../../components/TryIt';
 # Query parameters
 
 ```
-GET /v1/search?q=RELIANCE&exchange=NSE&type=EQUITY&limit=10
+GET /api/search?q=RELIANCE&exchange=NSE&type=EQUITY&limit=10
 ```
 
 ## Field reference
@@ -27,7 +27,7 @@ GET /v1/search?q=RELIANCE&exchange=NSE&type=EQUITY&limit=10
 
 <Callout type="info" emoji="💡">
   `include=ohlcv` adds a few KB per row; skip it on the typeahead and use
-  [`/v1/instruments/ltp`](/instruments/ltp-snapshot) for the LTP enrichment
+  [`/api/instruments/ltp`](/instruments/ltp-snapshot) for the LTP enrichment
   on selection.
 </Callout>
 
@@ -36,21 +36,21 @@ GET /v1/search?q=RELIANCE&exchange=NSE&type=EQUITY&limit=10
 ### Typeahead for NSE equities only
 
 ```bash
-curl "https://api.vedpragya.com/v1/search?q=REL&exchange=NSE&type=EQUITY&limit=5" \
+curl "https://marketdata.vedpragya.com/api/search?q=REL&exchange=NSE&type=EQUITY&limit=5" \
   -H "x-api-key: $STREAMS_KEY"
 ```
 
 ### Search the option chain by underlying
 
 ```bash
-curl "https://api.vedpragya.com/v1/search?q=NIFTY+23500&exchange=NFO" \
+curl "https://marketdata.vedpragya.com/api/search?q=NIFTY+23500&exchange=NFO" \
   -H "x-api-key: $STREAMS_KEY"
 ```
 
 ### Sort by top-gainers
 
 ```bash
-curl "https://api.vedpragya.com/v1/search?q=&exchange=NSE&type=EQUITY&sort=change_pct&limit=20" \
+curl "https://marketdata.vedpragya.com/api/search?q=&exchange=NSE&type=EQUITY&sort=change_pct&limit=20" \
   -H "x-api-key: $STREAMS_KEY"
 ```
 
@@ -73,7 +73,7 @@ curl "https://api.vedpragya.com/v1/search?q=&exchange=NSE&type=EQUITY&sort=chang
 
 <TryIt
   method="GET"
-  url="https://api.vedpragya.com/v1/search"
+  url="https://marketdata.vedpragya.com/api/search"
   apiKeyHint="vk_live_..."
   params={[
     { name: 'q', label: 'Query', default: 'NIFTY 23500 CE', placeholder: 'NIFTY 23500 CE' },

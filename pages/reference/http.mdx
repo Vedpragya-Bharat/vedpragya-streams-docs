@@ -7,13 +7,13 @@ import { Callout, Tabs } from 'nextra/components';
 
 # HTTP endpoints
 
-Base URL: `https://api.vedpragya.com/v1` (production) or
-`https://stg.api.vedpragya.com` (staging).
+Base URL: `https://marketdata.vedpragya.com/api` (production) or
+`https://stg.marketdata.vedpragya.com` (staging).
 
 All endpoints require the `x-api-key` header. Per-user endpoints
 additionally require `Authorization: Bearer <token>`.
 
-## `GET /v1/search`
+## `GET /api/search`
 
 Identifier-aware search. See [Search →](/search).
 
@@ -31,7 +31,7 @@ Identifier-aware search. See [Search →](/search).
 Response: `{ query, total, results: Result[] }`. See
 [Response shape →](/search/response).
 
-## `POST /v1/instruments/ltp`
+## `POST /api/instruments/ltp`
 
 Bulk LTP snapshot. See [LTP snapshot →](/instruments/ltp-snapshot).
 
@@ -50,7 +50,7 @@ Body:
 Response: `{ "<uirId>": Quote | null, ... }`. See
 [LTP snapshot → Response shape](/instruments/ltp-snapshot#response).
 
-## `GET /v1/instruments/ohlcv`
+## `GET /api/instruments/ohlcv`
 
 Intraday and EOD candles. See [OHLCV →](/instruments/ohlcv).
 
@@ -66,7 +66,7 @@ Intraday and EOD candles. See [OHLCV →](/instruments/ohlcv).
 Response: `{ instrument, interval, candles: Candle[] }`. See
 [OHLCV →](/instruments/ohlcv#response).
 
-## `GET /v1/instruments/resolve`
+## `GET /api/instruments/resolve`
 
 Canonical → UIR id.
 
@@ -76,13 +76,13 @@ Canonical → UIR id.
 
 Response: `{ id, canonical }`.
 
-## `GET /v1/watchlist`
+## `GET /api/watchlist`
 
 List the current user's watchlist. Requires `Authorization: Bearer`.
 
 Response: `{ items: [{ uirId, addedAt, order }, ...] }`.
 
-## `POST /v1/watchlist`
+## `POST /api/watchlist`
 
 Add instruments to the current user's watchlist. Requires `Authorization: Bearer`.
 
@@ -99,13 +99,13 @@ Body:
 
 Response: `{ added, skipped, removed }`.
 
-## `DELETE /v1/watchlist/:uirId`
+## `DELETE /api/watchlist/:uirId`
 
 Remove a single instrument. Requires `Authorization: Bearer`.
 
 Response: `{ removed, watchlist: [{ uirId, addedAt, order }, ...] }`.
 
-## `POST /v1/watchlist/reorder`
+## `POST /api/watchlist/reorder`
 
 Persist a new display order. Requires `Authorization: Bearer`.
 
@@ -123,7 +123,7 @@ See [Common errors →](/errors/common).
 
 ## Idempotency
 
-Write endpoints (`POST /v1/watchlist`, `POST /v1/watchlist/reorder`)
+Write endpoints (`POST /api/watchlist`, `POST /api/watchlist/reorder`)
 honour the `Idempotency-Key` header. Pass any UUID; the platform
 dedupes for 5 minutes.
 
@@ -131,13 +131,13 @@ dedupes for 5 minutes.
 
 | Endpoint                    | Per key           |
 | --------------------------- | ----------------- |
-| `GET /v1/search`            | 600 / 60 s        |
-| `POST /v1/instruments/ltp`  | 1200 / 60 s       |
-| `GET /v1/instruments/ohlcv` | 600 / 60 s        |
-| `GET /v1/watchlist`         | 600 / 60 s        |
-| `POST /v1/watchlist`        | 120 / 60 s        |
-| `DELETE /v1/watchlist/:id`  | 600 / 60 s        |
-| `POST /v1/watchlist/reorder`| 60 / 60 s         |
+| `GET /api/search`            | 600 / 60 s        |
+| `POST /api/instruments/ltp`  | 1200 / 60 s       |
+| `GET /api/instruments/ohlcv` | 600 / 60 s        |
+| `GET /api/watchlist`         | 600 / 60 s        |
+| `POST /api/watchlist`        | 120 / 60 s        |
+| `DELETE /api/watchlist/:id`  | 600 / 60 s        |
+| `POST /api/watchlist/reorder`| 60 / 60 s         |
 
 ## Next
 

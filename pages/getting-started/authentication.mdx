@@ -15,7 +15,7 @@ no OAuth flows to wire, no tokens to refresh, and no SDK to install.
 <Tabs items={['REST', 'WebSocket', 'Server-side']}>
   <Tabs.Tab>
     ```bash
-    curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
+    curl "https://marketdata.vedpragya.com/api/search?q=RELIANCE" \
       -H "x-api-key: $STREAMS_KEY"
     ```
   </Tabs.Tab>
@@ -23,7 +23,7 @@ no OAuth flows to wire, no tokens to refresh, and no SDK to install.
     ```js
     import { io } from 'socket.io-client';
 
-    const socket = io('https://stream.vedpragya.com', {
+    const socket = io('https://marketdata.vedpragya.com', {
       extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
       transports: ['websocket'],          // skip the long-poll upgrade
     });
@@ -33,7 +33,7 @@ no OAuth flows to wire, no tokens to refresh, and no SDK to install.
     ```ts
     // You should also pin the host on the server.
     const headers = { 'x-api-key': process.env.STREAMS_KEY! };
-    const r = await fetch('https://api.vedpragya.com/v1/search?q=RELIANCE', {
+    const r = await fetch('https://marketdata.vedpragya.com/api/search?q=RELIANCE', {
       headers,
     });
     ```
@@ -70,11 +70,11 @@ Rate limits are **per key**, not per IP. The model is intentionally simple:
 
 | Endpoint                    | Limit (per key)             | Burst          |
 | --------------------------- | --------------------------- | -------------- |
-| `GET /v1/search`            | 600 requests / 60 s         | 30 in 1 s      |
-| `POST /v1/instruments/ltp` | 1200 requests / 60 s        | 60 in 1 s      |
-| `GET /v1/instruments/ohlcv` | 600 requests / 60 s         | 30 in 1 s      |
-| `GET /v1/watchlist`         | 600 requests / 60 s         | 30 in 1 s      |
-| `POST /v1/watchlist`        | 120 requests / 60 s         | 6 in 1 s       |
+| `GET /api/search`            | 600 requests / 60 s         | 30 in 1 s      |
+| `POST /api/instruments/ltp` | 1200 requests / 60 s        | 60 in 1 s      |
+| `GET /api/instruments/ohlcv` | 600 requests / 60 s         | 30 in 1 s      |
+| `GET /api/watchlist`         | 600 requests / 60 s         | 30 in 1 s      |
+| `POST /api/watchlist`        | 120 requests / 60 s         | 6 in 1 s       |
 | WS messages (subscribe)     | 60 subscribe frames / 60 s  | 4 in 1 s       |
 | WS messages (everything else) | unlimited on inbound       | —              |
 

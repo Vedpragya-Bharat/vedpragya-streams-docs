@@ -18,7 +18,7 @@ without flicker.
 ### 1. Load the watchlist ids
 
 ```js
-const r = await fetch('https://api.vedpragya.com/v1/watchlist', {
+const r = await fetch('https://marketdata.vedpragya.com/api/watchlist', {
   headers: {
     'x-api-key': STREAMS_KEY,
     'Authorization': `Bearer ${USER_TOKEN}`,
@@ -31,7 +31,7 @@ const ids = items.map((i) => i.uirId);
 ### 2. Snapshot the prices
 
 ```js
-const snapR = await fetch('https://api.vedpragya.com/v1/instruments/ltp', {
+const snapR = await fetch('https://marketdata.vedpragya.com/api/instruments/ltp', {
   method: 'POST',
   headers: {
     'x-api-key': STREAMS_KEY,
@@ -45,7 +45,7 @@ const snap = await snapR.json();        // { "114996": {...}, "26026": {...} }
 ### 3. Open the socket, subscribe, listen
 
 ```js
-const socket = io('https://stream.vedpragya.com', {
+const socket = io('https://marketdata.vedpragya.com', {
   extraHeaders: { 'x-api-key': STREAMS_KEY },
   transports: ['websocket'],
 });
@@ -89,7 +89,7 @@ export function Watchlist({ apiKey, userToken }: { apiKey: string; userToken: st
 
     async function open() {
       // 1. Watchlist ids
-      const wl = await fetch('https://api.vedpragya.com/v1/watchlist', {
+      const wl = await fetch('https://marketdata.vedpragya.com/api/watchlist', {
         headers: { 'x-api-key': apiKey, 'Authorization': `Bearer ${userToken}` },
       }).then((r) => r.json());
 
@@ -97,7 +97,7 @@ export function Watchlist({ apiKey, userToken }: { apiKey: string; userToken: st
       const ids: number[] = wl.items.map((i: any) => i.uirId);
 
       // 2. Snapshot
-      const snap = await fetch('https://api.vedpragya.com/v1/instruments/ltp', {
+      const snap = await fetch('https://marketdata.vedpragya.com/api/instruments/ltp', {
         method: 'POST',
         headers: {
           'x-api-key': apiKey,
@@ -118,7 +118,7 @@ export function Watchlist({ apiKey, userToken }: { apiKey: string; userToken: st
       );
 
       // 4. Open socket
-      const socket = io('https://stream.vedpragya.com', {
+      const socket = io('https://marketdata.vedpragya.com', {
         extraHeaders: { 'x-api-key': apiKey },
         transports: ['websocket'],
       });

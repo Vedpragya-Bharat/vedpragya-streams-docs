@@ -7,8 +7,8 @@ import { Callout, Tabs } from 'nextra/components';
 
 # WebSocket protocol
 
-URL: `https://stream.vedpragya.com` (production) or
-`https://stg.stream.vedpragya.com` (staging).
+URL: `https://marketdata.vedpragya.com` (production) or
+`https://stg.marketdata.vedpragya.com` (staging).
 
 Required header: `x-api-key`.
 
@@ -21,7 +21,7 @@ bottom of this page for advanced integrations.
 ```js
 import { io } from 'socket.io-client';
 
-const socket = io('https://stream.vedpragya.com', {
+const socket = io('https://marketdata.vedpragya.com', {
   extraHeaders: { 'x-api-key': STREAMS_KEY },
   transports: ['websocket'],
   reconnection: true,

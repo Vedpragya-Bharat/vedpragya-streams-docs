@@ -7,7 +7,7 @@ import { Callout, Tabs, Steps } from 'nextra/components';
 
 # Search
 
-`GET /v1/search` is the workhorse. It powers typeahead, the symbol picker on
+`GET /api/search` is the workhorse. It powers typeahead, the symbol picker on
 the watchlist dialog, the search bar in your dashboard, and pretty much any
 "user is typing, give me ranked results" interaction.
 
@@ -21,7 +21,7 @@ match.
 ```js
 async function search(q) {
   const r = await fetch(
-    `https://api.vedpragya.com/v1/search?q=${encodeURIComponent(q)}`,
+    `https://marketdata.vedpragya.com/api/search?q=${encodeURIComponent(q)}`,
     { headers: { 'x-api-key': STREAMS_KEY } },
   );
   return (await r.json()).results;

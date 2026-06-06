@@ -14,24 +14,17 @@ by query or instrument type — empty values are present-but-null.
 
 ```json
 {
-  "query": "NIFTY 23500 CE",
-  "total": 1,
-  "results": [ { /* Result */ } ],
-  "facets": {
-    "exchange": { "NFO": 1 },
-    "type":     { "CE":  1 }
-  },
-  "took": 12
+  "success": true,
+  "data": [ { /* Result */ } ],
+  "timestamp": "2026-06-06T03:45:11.000Z"
 }
 ```
 
-| Field     | Type     | Notes                                                |
-| --------- | -------- | ---------------------------------------------------- |
-| `query`   | string   | The original `q`, after normalisation.               |
-| `total`   | integer  | Total matches. May exceed `results.length`.          |
-| `results` | Result[] | Up to `limit` results.                               |
-| `facets`  | object   | Counts of how many of the total match each facet.    |
-| `took`    | integer  | Server-side query time in milliseconds.              |
+| Field       | Type     | Notes                                                |
+| ----------- | -------- | ---------------------------------------------------- |
+| `success`   | boolean  | `true` if search succeeded.                          |
+| `data`      | Result[] | Up to `limit` results.                               |
+| `timestamp` | string   | ISO-8601 timestamp of when the results were generated. |
 
 <Callout type="info" emoji="🔍">
   `total` is the count *before* `limit`/`offset` are applied. If you
@@ -42,37 +35,45 @@ by query or instrument type — empty values are present-but-null.
 
 ```json
 {
-  "uirId": 114996,
-  "canonical": "NSE:RELIANCE",
-  "name": "Reliance Industries Limited",
+  "id": 334562,
+  "canonicalSymbol": "NSE:RELIANCE",
+  "wsSubscribeUirId": 334562,
+  "symbol": "RELIANCE",
+  "name": "RELIANCE",
   "exchange": "NSE",
-  "instrumentType": "EQUITY",
+  "segment": "NSE",
+  "instrumentType": "EQ",
+  "assetClass": "equity",
+  "isDerivative": false,
   "lotSize": 1,
-  "tickSize": 0.05,
-  "priceStatus": "live",
-  "lastPrice": 2347.10,
-  "change": 6.00,
-  "changePct": 0.26,
-  "volume": 12403201,
-  "isin": "INE002A01018"
+  "tickSize": 10,
+  "priceStatus": "stale",
+  "last_price": null,
+  "change": null,
+  "pchange": null,
+  "streamProvider": "falcon"
 }
 ```
 
-| Field            | Type    | Notes                                                              |
+| Field             | Type    | Notes                                                              |
 | ---------------- | ------- | ------------------------------------------------------------------ |
-| `uirId`          | integer | **The only field your code should keep.**                          |
-| `canonical`      | string  | `EXCHANGE:SYMBOL`. Display-only.                                   |
-| `name`           | string  | Human-readable. May differ from the canonical symbol.              |
+| `id`             | integer | **Unique instrument ID (UIR).** Use this for subscription.        |
+| `canonicalSymbol`| string  | `EXCHANGE:SYMBOL` format. Display-only.                               |
+| `wsSubscribeUirId`| integer | Same as `id`. Use for WebSocket subscription.                       |
+| `symbol`         | string  | Trading symbol (e.g. "RELIANCE").                                  |
+| `name`           | string  | Human-readable name.                                              |
 | `exchange`       | string  | `NSE`, `BSE`, `MCX`, `CDS`, `NFO`, `BFO`.                          |
-| `instrumentType` | string  | `EQUITY`, `INDEX`, `FUT`, `CE`, `PE`, `COMMODITY`, `CURRENCY`.      |
-| `lotSize`        | integer | Lot size (derivatives). 1 for cash.                                |
+| `segment`        | string  | Exchange segment (same as exchange for equities).                   |
+| `instrumentType` | string  | `EQ`, `IU`, `FUT`, `CE`, `PE`, `MCX`, `CURRENCY`.                  |
+| `assetClass`     | string  | `equity`, `derivative`, `commodity`, `currency`.                   |
+| `isDerivative`   | boolean | Whether this is a derivative instrument.                          |
+| `lotSize`        | integer | Lot size (derivatives). 1 for cash.                                  |
 | `tickSize`       | number  | Smallest price increment.                                          |
-| `priceStatus`    | string  | `live`, `closed`, `halted`, `pre_open`. See below.                 |
-| `lastPrice`      | number? | Most recent trade. `null` if no quote available.                   |
-| `change`         | number? | `lastPrice - close`. `null` if no quote.                           |
-| `changePct`      | number? | `(change / close) * 100`. `null` if no quote.                      |
-| `volume`         | integer?| Cumulative traded volume. `null` if no quote.                      |
-| `isin`           | string? | ISIN (equities only).                                              |
+| `priceStatus`    | string  | `live`, `stale`, `closed`, `halted`, `pre_open`. See below.        |
+| `last_price`     | number? | Most recent trade. `null` if no quote available.                   |
+| `change`         | number? | Absolute change (`last_price - close`). `null` if no quote.          |
+| `pchange`       | number? | Percentage change. `null` if no quote.                              |
+| `streamProvider` | string  | Data provider: `falcon`, `vayu`, `drift`, `atlas`.                  |
 
 ## When `priceStatus` matters
 
@@ -85,22 +86,22 @@ by query or instrument type — empty values are present-but-null.
 | `delisted`     | The contract has been delisted. It is in the catalogue for historical reference only. |
 
 <Callout type="info" emoji="📋">
-  When the `priceStatus` is not `live`, `lastPrice`, `change`,
-  `changePct`, and `volume` are all `null`. Render a "no quote" state
+  When the `priceStatus` is not `live`, `last_price`, `change`,
+  `pchange` are all `null`. Render a "no quote" state
   — don't render `0`.
 </Callout>
 
-## Fields that can be absent
+## Fields that can be null/absent
 
-| Field         | When absent                                                   |
-| ------------- | ------------------------------------------------------------- |
-| `name`        | The catalogue doesn't have a long-form name.                  |
-| `lotSize`     | Only meaningful for derivatives.                              |
-| `tickSize`    | Only meaningful for instruments with a tick size.             |
-| `lastPrice`   | No current quote.                                             |
-| `change`      | No current quote.                                             |
-| `changePct`   | No current quote.                                             |
-| `volume`      | No current quote.                                             |
+| Field          | When null/absent                                              |
+| -------------- | ------------------------------------------------------------- |
+| `name`         | The catalogue doesn't have a long-form name.                  |
+| `lotSize`      | Only meaningful for derivatives.                              |
+| `tickSize`     | Only meaningful for instruments with a tick size.            |
+| `last_price`   | No current quote.                                             |
+| `change`       | No current quote.                                             |
+| `pchange`      | No current quote.                                             |
+| `streamProvider` | Not available for this instrument.                           |
 | `isin`        | Not an equity.                                                |
 
 ## A note on `name` vs `canonical`
@@ -117,7 +118,7 @@ URL bar.
 ## Example: a search for "RELIANCE"
 
 ```bash
-curl "https://api.vedpragya.com/v1/search?q=RELIANCE&exchange=NSE" \
+curl "https://marketdata.vedpragya.com/api/search?q=RELIANCE&exchange=NSE" \
   -H "x-api-key: $STREAMS_KEY"
 ```
 

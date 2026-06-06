@@ -7,7 +7,7 @@ import { Callout, Tabs, Cards } from 'nextra/components';
 
 # Live data
 
-The live gateway is a Socket.IO WebSocket at `wss://stream.vedpragya.com`.
+The live gateway is a Socket.IO WebSocket at `wss://marketdata.vedpragya.com`.
 It speaks a tiny, stable protocol. There is **one** message type for
 subscribing, **one** event name for ticks, and **one** for subscription
 acknowledgements. Everything else is metadata.
@@ -30,7 +30,7 @@ acknowledgements. Everything else is metadata.
     ```js
     import { io } from 'socket.io-client';
 
-    const socket = io('https://stream.vedpragya.com', {
+    const socket = io('https://marketdata.vedpragya.com', {
       extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
       transports: ['websocket'],
     });
@@ -55,7 +55,7 @@ acknowledgements. Everything else is metadata.
     ```html
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-      const socket = io('https://stream.vedpragya.com', {
+      const socket = io('https://marketdata.vedpragya.com', {
         extraHeaders: { 'x-api-key': window.STREAMS_KEY },
         transports: ['websocket'],
       });
@@ -94,7 +94,7 @@ acknowledgements. Everything else is metadata.
         print(data['uirId'], data['lastPrice'])
 
     sio.connect(
-        'https://stream.vedpragya.com',
+        'https://marketdata.vedpragya.com',
         headers={'x-api-key': os.environ['STREAMS_KEY']},
         transports=['websocket'],
     )

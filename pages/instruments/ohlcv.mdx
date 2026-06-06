@@ -7,7 +7,7 @@ import { Callout, Tabs } from 'nextra/components';
 
 # OHLCV & history
 
-`GET /v1/instruments/ohlcv` returns OHLCV candles for a single UIR id.
+`GET /api/stock/vayu/ohlcv` returns OHLCV candles for a single UIR id.
 It supports both intraday and end-of-day (EOD) intervals.
 
 ## Intervals
@@ -26,7 +26,7 @@ It supports both intraday and end-of-day (EOD) intervals.
 ## Request
 
 ```http
-GET /v1/instruments/ohlcv?instrument=114996&interval=5m&from=2026-06-04T03:45:00Z&to=2026-06-04T10:00:00Z
+GET /api/stock/vayu/ohlcv?instrument=114996&interval=5m&from=2026-06-04T03:45:00Z&to=2026-06-04T10:00:00Z
 x-api-key: vk_live_...
 ```
 
@@ -133,7 +133,7 @@ provider's "closing print" is in. They are immutable from that point.
 ```js
 async function getCandles(uirId, interval, from, to) {
   const r = await fetch(
-    `https://api.vedpragya.com/v1/instruments/ohlcv?instrument=${uirId}` +
+    `https://marketdata.vedpragya.com/api/instruments/ohlcv?instrument=${uirId}` +
       `&interval=${interval}&from=${encodeURIComponent(from)}` +
       `&to=${encodeURIComponent(to)}`,
     { headers: { 'x-api-key': STREAMS_KEY } },

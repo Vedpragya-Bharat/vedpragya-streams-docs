@@ -102,7 +102,7 @@ async function openWatchlist(ids) {
   renderRows(snapshot);
 
   // 2. Open the socket and let ticks overwrite.
-  const socket = io('https://stream.vedpragya.com', { /* … */ });
+  const socket = io('https://marketdata.vedpragya.com', { /* … */ });
   socket.on('connect', () => {
     socket.emit('subscribe', { channel: 'market_data', instruments: ids });
   });
@@ -117,7 +117,7 @@ For slow networks, open the socket first, then paint the snapshot
 
 ```js
 async function openWatchlist(ids) {
-  const socket = io('https://stream.vedpragya.com', { /* … */ });
+  const socket = io('https://marketdata.vedpragya.com', { /* … */ });
   socket.on('connect', () => {
     socket.emit('subscribe', { channel: 'market_data', instruments: ids });
   });
@@ -141,7 +141,7 @@ The gateway replays the last 60 seconds of ticks on reconnect. **You
 should not rely on this for true at-least-once delivery** — if a
 subscription is paused for longer than the replay window, you will see
 gaps. The right way to handle a long pause is to re-hydrate from
-`/v1/instruments/ltp` on reconnect.
+`/api/stock/vayu/ltp` on reconnect.
 
 ## What not to do
 

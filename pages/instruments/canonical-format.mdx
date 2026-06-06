@@ -89,14 +89,14 @@ canonical follows the futures format.
 ```js
 // 1. Resolve
 const r1 = await fetch(
-  'https://api.vedpragya.com/v1/instruments/resolve?canonical=NSE:RELIANCE',
+  'https://marketdata.vedpragya.com/api/instruments/resolve?canonical=NSE:RELIANCE',
   { headers: { 'x-api-key': STREAMS_KEY } },
 ).then((r) => r.json());
 // r1: { id: 114996, canonical: 'NSE:RELIANCE' }
 
 // 2. UIR id → canonical
 const r2 = await fetch(
-  'https://api.vedpragya.com/v1/instruments/resolve?id=114996',
+  'https://marketdata.vedpragya.com/api/instruments/resolve?id=114996',
   { headers: { 'x-api-key': STREAMS_KEY } },
 ).then((r) => r.json());
 // r2: { id: 114996, canonical: 'NSE:RELIANCE' }
@@ -131,7 +131,7 @@ date, the canonical exists in the catalogue for historical reference
 but its `priceStatus` is `closed`. The active contract is the next
 expiry. The platform does not auto-rewrite a "give me the NIFTY future"
 query to "give me the active NIFTY future" — that is your code's job.
-Use `/v1/instruments/active` for that.
+Use `/api/instruments/active` for that.
 
 ## When canonicals change
 

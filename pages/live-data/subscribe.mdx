@@ -16,7 +16,7 @@ There are exactly two outbound frames you need to know: `subscribe` and
 ```json
 {
   "channel": "market_data",
-  "instruments": [114996, 26026, 256265]
+  "instruments": [334562, 26026, 256265]
 }
 ```
 
@@ -30,7 +30,7 @@ There are exactly two outbound frames you need to know: `subscribe` and
 
 | Mode        | What you get                                                                                  |
 | ----------- | --------------------------------------------------------------------------------------------- |
-| `ltp`       | `lastPrice`, `ts` only. Smallest payload. Use for tickers and watchlist rows.                 |
+| `ltp`       | `last_price`, `ts` only. Smallest payload. Use for tickers and watchlist rows.                 |
 | `quote`     | LTP + OHLC + volume + change. Default mode.                                                    |
 | `full`      | Quote + market depth (top 5 bids/asks) + OI + IV. Heaviest. Use for option chains.             |
 | `snapshot`  | Alias for `quote`. Emits one frame per id with the current state, then no more.               |
@@ -42,8 +42,8 @@ ids it could not, and the mode.
 ```json
 {
   "channel": "market_data",
-  "mode": "quote",
-  "confirmed": [114996, 26026],
+  "instruments": [334562, 26026],
+  "included": [334562, 26026],
   "unresolved": [99999999],
   "forbidden": []
 }
@@ -51,7 +51,7 @@ ids it could not, and the mode.
 
 | Field         | Meaning                                                              |
 | ------------- | -------------------------------------------------------------------- |
-| `confirmed`   | The UIR ids that are now subscribed.                                 |
+| `included`   | The UIR ids that are now subscribed.                                 |
 | `unresolved`  | The UIR ids that the platform could not resolve.                     |
 | `forbidden`   | The UIR ids that the platform resolved but your key cannot access.  |
 

@@ -27,14 +27,14 @@ export STREAMS_KEY=vk_live_xxxxxxxxxxxxxxxxxxxxxxxx
 <Tabs items={['cURL', 'Node']}>
   <Tabs.Tab>
     ```bash
-    curl "https://api.vedpragya.com/v1/search?q=RELIANCE" \
+    curl "https://marketdata.vedpragya.com/api/search?q=RELIANCE" \
       -H "x-api-key: $STREAMS_KEY"
     ```
   </Tabs.Tab>
   <Tabs.Tab>
     ```js
     const r = await fetch(
-      'https://api.vedpragya.com/v1/search?q=RELIANCE',
+      'https://marketdata.vedpragya.com/api/search?q=RELIANCE',
       { headers: { 'x-api-key': process.env.STREAMS_KEY } }
     );
     const json = await r.json();
@@ -49,13 +49,13 @@ remember for everything else.
 ## Step 3 — snapshot
 
 ```bash
-curl -X POST "https://api.vedpragya.com/v1/instruments/ltp" \
+curl -X POST "https://marketdata.vedpragya.com/api/stock/vayu/ltp" \
   -H "x-api-key: $STREAMS_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"instruments": [114996]}'
+  -d '{"instruments": [334562]}'
 ```
 
-You should see a numeric `lastPrice` for the instrument.
+You should see a numeric `last_price` for the instrument.
 
 ## Step 4 — live
 
@@ -64,7 +64,7 @@ You should see a numeric `lastPrice` for the instrument.
     ```js
     import { io } from 'socket.io-client';
 
-    const socket = io('https://stream.vedpragya.com', {
+    const socket = io('https://marketdata.vedpragya.com', {
       extraHeaders: { 'x-api-key': process.env.STREAMS_KEY },
       transports: ['websocket'],
     });
@@ -73,12 +73,12 @@ You should see a numeric `lastPrice` for the instrument.
       console.log('connected', socket.id);
       socket.emit('subscribe', {
         channel: 'market_data',
-        instruments: [114996],
+        instruments: [334562],
       });
     });
 
     socket.on('market_data', (tick) => {
-      console.log(tick.uirId, tick.lastPrice, tick.ts);
+      console.log(tick.uirId, tick.last_price, tick.ts);
     });
 
     socket.on('subscription_confirmed', (ack) => {
@@ -102,10 +102,10 @@ You should see a numeric `lastPrice` for the instrument.
 
     @sio.on('market_data')
     def on_tick(data):
-        print(data['uirId'], data['lastPrice'], data['ts'])
+        print(data['uirId'], data['last_price'], data['ts'])
 
     sio.connect(
-        'https://stream.vedpragya.com',
+        'https://marketdata.vedpragya.com',
         headers={'x-api-key': os.environ['STREAMS_KEY']},
         transports=['websocket'],
     )
