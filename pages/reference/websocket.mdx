@@ -18,6 +18,8 @@ bottom of this page for advanced integrations.
 
 ## Connection
 
+### Socket.IO Transport (Recommended)
+
 ```js
 import { io } from 'socket.io-client';
 
@@ -31,9 +33,20 @@ const socket = io('https://marketdata.vedpragya.com', {
 });
 ```
 
+### Native WebSocket Transport
+
+```js
+const socket = new WebSocket('wss://marketdata.vedpragya.com/ws?x-api-key=YOUR_KEY');
+
+socket.addEventListener('message', (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Received:', data);
+});
+```
+
 ## Events
 
-### client → server: `subscribe`
+### client → server: `subscribe` (Socket.IO)
 
 ```json
 {
@@ -43,11 +56,29 @@ const socket = io('https://marketdata.vedpragya.com', {
 }
 ```
 
-| Field         | Type    | Required | Notes                                                       |
-| ------------- | ------- | -------- | ----------------------------------------------------------- |
-| `channel`     | string  | Yes      | Always `"market_data"`.                                     |
-| `instruments` | int[]   | Yes      | 1 to 1,000 UIR ids.                                         |
-| `mode`        | string  | No       | `ltp`, `quote` (default), `full`, `snapshot`.                |
+| Field         | Type        | Required | Notes                                                       |
+| ------------- | ----------- | -------- | ----------------------------------------------------------- |
+| `channel`     | string      | Yes      | Always `"market_data"`.                                     |
+| `instruments` | (int\|string)[] | Yes      | UIR ids (`[114996]`) or canonical symbols (`["NSE:RELIANCE"]`) |
+| `mode`        | string      | No       | `ltp`, `quote` (default), `full`, `snapshot`.                |
+
+### client → server: `subscribe` (Native WebSocket)
+
+```json
+{
+  "event": "subscribe",
+  "data": {
+    "instruments": [114996, 26026],
+    "mode": "quote"
+  }
+}
+```
+
+| Field         | Type  | Required | Notes                                                       |
+| ------------- | ----- | -------- | ----------------------------------------------------------- |
+| `event`       | string | Yes      | Always `"subscribe"` or `"unsubscribe"`                      |
+| `data.instruments` | int[] | Yes      | 1 to 1,000 UIR ids **only** (no string canonical symbols)    |
+| `data.mode`   | string| No       | `ltp`, `quote` (default), `full`, `snapshot`.                |
 
 ### client → server: `unsubscribe`
 
